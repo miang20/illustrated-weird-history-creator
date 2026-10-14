@@ -32,9 +32,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install FFmpeg and system text dependencies
-        run: |
-          sudo apt-get install -y ffmpeg espeak-ng libsndfile1
       - name: Install CPU PyTorch and neural voice/image dependencies
         run: |
           python -m pip install --upgrade pip
