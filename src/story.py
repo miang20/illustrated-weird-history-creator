@@ -65,25 +65,45 @@ def research_topic(topic: str) -> Research:
     topic = topic.strip()
     if len(topic) < 4:
         raise ValueError("Please enter a more specific historical topic.")
-    response = requests.get(
-        WIKI_API,
-        params={"action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 10},
-        headers=HEADERS,
-        timeout=25,
-    )
-    response.raise_for_status()
-    results = response.json().get("query", {}).get("search", [])
+    def search_wikipedia(query: str) -> list[dict]:
+        response = requests.get(
+            WIKI_API,
+            params={"action": "query", "list": "search", "srsearch": query, "format": "json", "srlimit": 10},
+            headers=HEADERS,
+            timeout=25,
+        )
+        response.raise_for_status()
+        return response.json().get("query", {}).get("search", [])
+
+    results = search_wikipedia(topic)
+
+    # Descriptive documentary titles often include adjectives such as "terrifying" and
+    # framing words such as "origins", which can hide the actual subject page in Wikipedia
+    # search. Retry with the core subject instead of rejecting a valid topic.
+    removable = {"terrifying", "terrible", "strange", "weird", "mysterious", "shocking",
+                 "dark", "untold", "origins", "origin", "history", "story", "documentary",
+                 "the", "a", "an", "of", "and", "in", "on", "for"}
+    core_terms = [word for word in re.findall(r"[a-z0-9]+", topic.lower()) if word not in removable]
+    fallback_query = " ".join(core_terms).strip()
+    if fallback_query and fallback_query.casefold() != topic.casefold():
+        known = {item.get("title", "").casefold() for item in results}
+        results.extend(item for item in search_wikipedia(fallback_query)
+                       if item.get("title", "").casefold() not in known)
+
     if not results:
         raise ValueError(f"No Wikipedia research result found for '{topic}'. Try a more specific topic.")
 
-    # Never concatenate arbitrary search results: that caused unrelated books, films and albums
-    # to be mixed into one narration. Pick one clearly relevant primary article.
+    # Never concatenate arbitrary search results: choose one relevant primary article.
     ranked = sorted(
         (result for result in results if result.get("title")),
-        key=lambda item: (_title_relevance(topic, item["title"]), -int(item.get("size", 0))),
+        key=lambda item: (
+            _title_relevance(topic, item["title"]),
+            item["title"].strip().casefold() == fallback_query.casefold(),
+            int(item.get("size", 0)),
+        ),
         reverse=True,
     )
-    if not ranked or _title_relevance(topic, ranked[0]["title"]) < 0.34:
+    if not ranked or _title_relevance(topic, ranked[0]["title"]) < 0.30:
         choices = ", ".join(item.get("title", "") for item in ranked[:4])
         raise ValueError(
             f"Could not confidently match '{topic}' to a relevant Wikipedia article. "
