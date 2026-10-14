@@ -17,17 +17,17 @@ MODEL_CANDIDATES = [
 # One coherent visual language across the whole documentary. Individual shot
 # directions vary, but every image stays in the same illustrated 2D universe.
 STYLE_BIBLE = (
-    "EXCLUSIVELY 2D ANIMATED ILLUSTRATION FRAME, premium hand-drawn animated history documentary, "
-    "clearly drawn ink contours, simplified expressive character design, readable silhouettes, "
+    "EXCLUSIVELY HYBRID 2D ANIMATED HISTORY SCENE, premium hand-drawn 2D animation keyframe, illustrated documentary art direction, "
+    "clearly drawn ink contours, expressive hand-drawn characters in a readable action pose, designed for 2D cutout motion and parallax, readable silhouettes, "
     "flat graphic shapes, cel-shaded color blocks, layered cutout-animation aesthetic, "
-    "painted 2D backgrounds, graphic-novel panel composition, restrained halftone and paper grain, "
+    "painted 2D backgrounds, layered foreground/midground/background artwork for subtle parallax, graphic-novel panel composition, restrained halftone and paper grain, "
     "deep teal, burnt orange, parchment cream and charcoal palette, bold clean outlines, "
     "deliberate foreground midground background layers, designed animation keyframe, "
-    "not a photograph, not live action, not realistic rendering"
+    "not a photograph, not live action, not photorealism, not 3D rendering"
 )
 
 NEGATIVE_DIRECTION = (
-    "photograph, photorealistic, realistic skin texture, live action, cinematic still, 3D render, "
+    "photograph, photorealistic, realistic skin texture, live action, cinematic still, 3D render, CGI, "
     "plastic CGI, glossy toy, anime, chibi, photographic lighting, depth-of-field bokeh, "
     "modern clothing in historical scene, contemporary objects, garbled writing, "
     "letters, captions, typography, logo, watermark, duplicated people, extra limbs, "
