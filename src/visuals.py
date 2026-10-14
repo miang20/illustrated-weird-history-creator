@@ -52,11 +52,11 @@ def _scene_prompt(topic: str, paragraph: str, index: int) -> str:
         f"Avoid: {NEGATIVE_DIRECTION}."
     )
 
-def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_count: int = 12) -> list[Path]:
+def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_count: int = 30) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     if not paragraphs:
         raise ValueError("No narration paragraphs were supplied for scene generation.")
-    count = max(8, min(scene_count, 18, len(paragraphs)))
+    count = max(8, min(scene_count, 36, len(paragraphs)))
     indices = sorted(set(round(i * (len(paragraphs)-1) / max(1, count-1)) for i in range(count)))
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
