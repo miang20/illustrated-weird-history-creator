@@ -19,19 +19,17 @@ on:
           - "6"
           - "7"
           - "8"
-        default: "6"
+        default: "5"
       scenes:
         description: Number of generated scenes
         required: true
         type: choice
         options:
-          - "8"
-          - "10"
-          - "12"
-          - "14"
-          - "16"
           - "18"
-        default: "12"
+          - "24"
+          - "30"
+          - "36"
+        default: "30"
       voice:
         description: Neural narrator voice
         required: true
@@ -45,9 +43,9 @@ on:
         required: true
         type: choice
         options:
-          - 1280x720
           - 1920x1080
-        default: 1280x720
+          - 1280x720
+        default: 1920x1080
       angle:
         description: Optional editorial angle
         required: false
@@ -85,10 +83,10 @@ jobs:
       - name: Render complete documentary
         env:
           TOPIC: ${{ github.event.inputs.topic || '' }}
-          DURATION: ${{ github.event.inputs.duration || '6' }}
-          SCENES: ${{ github.event.inputs.scenes || '12' }}
+          DURATION: ${{ github.event.inputs.duration || '5' }}
+          SCENES: ${{ github.event.inputs.scenes || '30' }}
           VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
-          RESOLUTION: ${{ github.event.inputs.resolution || '1280x720' }}
+          RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
           ANGLE: ${{ github.event.inputs.angle || '' }}
         run: |
           python - <<'PY'
