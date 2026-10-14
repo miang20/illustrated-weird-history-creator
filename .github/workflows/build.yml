@@ -1,6 +1,9 @@
 name: Build Weird History Video
 
 on:
+  push:
+    branches:
+      - integration-check
   workflow_dispatch:
     inputs:
       topic:
@@ -40,8 +43,8 @@ jobs:
           pip install -r requirements-render.txt
       - name: Render complete documentary
         env:
-          TOPIC: ${{ inputs.topic }}
-          DURATION: ${{ inputs.duration }}
+          TOPIC: ${{ inputs.topic || 'The dancing plague of 1518' }}
+          DURATION: ${{ inputs.duration || '6' }}
         run: |
           python - <<'PY'
           import os
