@@ -128,7 +128,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
     words = sum(len(p.split()) for p in paragraphs)
     target = target_minutes * 132
-    if len(paragraphs) < 6 or not int(target * 0.95) <= words <= int(target * 1.3):
+    if len(paragraphs) < 6 or not int(target * 0.95) <= words <= int(target * 1.12):
         print(f"Local script model output did not meet length/structure checks ({words} words); using structured fallback.")
         return None
     return paragraphs
