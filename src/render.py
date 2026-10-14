@@ -29,7 +29,7 @@ def _caption_file(paragraphs: list[str], durations: list[float], destination: Pa
     lines, cursor, index = [], 0.0, 1
     for paragraph, duration in zip(paragraphs, durations):
         words = paragraph.split()
-        chunks = [words[i:i+9] for i in range(0, len(words), 9)]
+        chunks = [words[i:i+4] for i in range(0, len(words), 4)]
         total_words, used = max(1, len(words)), 0
         for chunk in chunks:
             start = cursor + duration * used / total_words
@@ -50,11 +50,15 @@ def _make_bed(destination: Path, duration: float, sample_rate: int = 24000) -> N
     bed *= (0.18+0.12*pulse) * np.minimum(1.0,t/2.0) * np.minimum(1.0,(duration-t)/3.0)
     sf.write(str(destination), bed.astype(np.float32), sample_rate)
 
-def _render_scene(image: Path, duration: float, destination: Path, resolution: str) -> None:
+def _render_scene(image: Path, duration: float, destination: Path, resolution: str, variant: int = 0) -> None:
     width, height = (1920,1080) if resolution == "1920x1080" else (1280,720)
     frames = max(1, int(math.ceil(duration*30)))
+    # Each short shot reframes the source image differently, so a generated still never sits unchanged for 20+ seconds.
+    x_expr = ["iw/2-(iw/zoom/2)", "0", "iw-iw/zoom", "(iw-iw/zoom)*on/max(1,\" + str(frames) + \"-1)"][variant % 4]
+    y_expr = ["ih/2-(ih/zoom/2)", "0", "ih-ih/zoom", "(ih-ih/zoom)*on/max(1,\" + str(frames) + \"-1)"][variant % 4]
+    zoom_expr = "min(zoom+0.0012,1.075)" if variant % 2 == 0 else "if(lte(zoom,1.001),1.075,max(1.0,zoom-0.0012))"
     vf = (f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},"
-          f"zoompan=z='min(zoom+0.00025,1.07)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={width}x{height}:fps=30,"
+          f"zoompan=z='{zoom_expr}':d=1:x='{x_expr}':y='{y_expr}':s={width}x{height}:fps=30,"
           "setsar=1,format=yuv420p")
     _run(["ffmpeg","-y","-hide_banner","-loglevel","error","-loop","1","-i",str(image),"-vf",vf,
           "-frames:v",str(frames),"-an","-c:v","libx264","-preset","ultrafast","-crf","22",str(destination)],
@@ -87,12 +91,16 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     if voice_seconds > duration_minutes*60*1.15:
         raise RuntimeError(f"Narration is {voice_seconds/60:.1f} minutes, too long for the selected {duration_minutes}-minute target.")
     images = generate_scenes(topic,story.paragraphs,job_dir/"scenes",scene_count)
-    total_seconds, per_scene = voice_seconds, voice_seconds/len(images)
+    total_seconds = voice_seconds
+    # Fast visual rhythm: a new 5.5-second shot with a different crop/motion, rather than one still lasting ~25 seconds.
+    shot_seconds = 5.5
+    shot_count = max(1, int(math.ceil(total_seconds / shot_seconds)))
     clips = []
-    for i,image in enumerate(images):
+    for i in range(shot_count):
         clip = job_dir/"clips"/f"clip_{i:03d}.mp4"
-        duration = per_scene if i < len(images)-1 else total_seconds-per_scene*(len(images)-1)
-        _render_scene(image,duration,clip,resolution)
+        duration = min(shot_seconds, total_seconds - i*shot_seconds)
+        image = images[(i * len(images)) // shot_count]
+        _render_scene(image, duration, clip, resolution, variant=i)
         clips.append(clip)
     concat_file = job_dir/"concat.txt"
     concat_file.write_text("".join(f"file '{p.as_posix()}'\n" for p in clips),encoding="utf-8")
