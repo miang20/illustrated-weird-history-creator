@@ -209,59 +209,27 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
 
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     research = research_topic(topic)
-    sentences = _sentences(research.extract)
-    if len(sentences) < 6:
-        raise ValueError("Research source did not contain enough distinct facts to build a documentary.")
-    target_words = target_minutes * WORDS_PER_MINUTE
-    # A fixed 6-sentences-per-minute cap produced short fallback narrations.
-    selected = _select_sentences_for_target(sentences, target_words)
     title = research.title
+    # Do not silently publish raw, unrelated encyclopedia snippets as a "documentary script".
+    # If the local no-key model cannot produce a complete narration, stop before voice/image rendering.
     try:
         ai_paragraphs = _generate_local_script(title, research.extract, target_minutes, angle)
-        if ai_paragraphs:
-            return Story(
-                title=title,
-                paragraphs=ai_paragraphs,
-                sources=research.sources,
-                word_count=sum(len(p.split()) for p in ai_paragraphs),
-            )
     except Exception as exc:
-        print(f"Local script model unavailable; using structured no-key fallback: {type(exc).__name__}: {exc}")
-    # High-quality deterministic fallback: use distinct source facts in sequence instead of padding with repeated filler.
-    opening = selected[0]
-    paragraphs = [
-        f"{opening} This is the documented starting point of {title}. The story becomes more revealing when we follow what happened next and separate contemporary evidence from later interpretation."
-    ]
-    transitions = [
-        "The surrounding context matters here.",
-        "The next documented detail adds another piece to the timeline.",
-        "This is where the surviving evidence becomes especially useful.",
-        "It is worth separating what the sources record from what later retellings suggest.",
-        "Seen in context, this detail helps explain why the event mattered.",
-    ]
-    for i, fact in enumerate(selected[1:]):
-        # Use occasional transitions only; repeating one every other sentence inflated runtime
-        # with generic filler and made the fallback narration feel mechanical.
-        prefix = transitions[(i // 5) % len(transitions)] + " " if i % 5 == 0 else ""
-        paragraphs.append((prefix + fact).strip())
-    paragraphs.append(
-        f"The lasting question about {title} is what the evidence can genuinely tell us. "
-        "Some details are documented; others remain uncertain or disputed. "
-        "That distinction does not make the story less extraordinary. It makes the real history more interesting than an embellished version."
+        raise RuntimeError(
+            "The local script model could not generate a usable narration, so rendering was stopped "
+            "before voice and image generation. This prevents spending a long CPU render on a broken script. "
+            f"Model error: {type(exc).__name__}: {exc}"
+        ) from exc
+    if not ai_paragraphs:
+        raise RuntimeError(
+            "The local script model output failed narration quality checks. Rendering was stopped before "
+            "voice and image generation instead of silently using copied encyclopedia sentences. "
+            "Please retry or use a more specific topic."
+        )
+    words = sum(len(p.split()) for p in ai_paragraphs)
+    return Story(
+        title=title,
+        paragraphs=ai_paragraphs,
+        sources=research.sources,
+        word_count=words,
     )
-    normalized = []
-    for paragraph in paragraphs:
-        if len(paragraph.split()) > 85:
-            bucket = ""
-            for bit in re.split(r"(?<=[.!?])\s+", paragraph):
-                if len((bucket + " " + bit).split()) > 65 and bucket:
-                    normalized.append(bucket.strip())
-                    bucket = bit
-                else:
-                    bucket += " " + bit
-            if bucket.strip():
-                normalized.append(bucket.strip())
-        else:
-            normalized.append(paragraph.strip())
-    source = research.sources
-    return Story(title, normalized, source, sum(len(p.split()) for p in normalized))
