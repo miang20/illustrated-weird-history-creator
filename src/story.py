@@ -186,7 +186,9 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
         "Seen in context, this detail helps explain why the event mattered.",
     ]
     for i, fact in enumerate(selected[1:]):
-        prefix = transitions[(i // 2) % len(transitions)] + " " if i % 2 == 0 else ""
+        # Use occasional transitions only; repeating one every other sentence inflated runtime
+        # with generic filler and made the fallback narration feel mechanical.
+        prefix = transitions[(i // 5) % len(transitions)] + " " if i % 5 == 0 else ""
         paragraphs.append((prefix + fact).strip())
     paragraphs.append(
         f"The lasting question about {title} is what the evidence can genuinely tell us. "
