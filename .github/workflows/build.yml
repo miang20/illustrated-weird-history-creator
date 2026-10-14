@@ -14,8 +14,46 @@ on:
       duration:
         description: Narration duration in minutes (5 to 8)
         required: true
-        type: string
+        type: choice
+        options:
+          - "5"
+          - "6"
+          - "7"
+          - "8"
         default: "6"
+      scenes:
+        description: Number of generated scenes
+        required: true
+        type: choice
+        options:
+          - "8"
+          - "10"
+          - "12"
+          - "14"
+          - "16"
+          - "18"
+        default: "12"
+      voice:
+        description: Neural narrator voice
+        required: true
+        type: choice
+        options:
+          - af_heart
+          - am_michael
+        default: af_heart
+      resolution:
+        description: Landscape export size
+        required: true
+        type: choice
+        options:
+          - 1280x720
+          - 1920x1080
+        default: 1280x720
+      angle:
+        description: Optional editorial angle
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -45,6 +83,10 @@ jobs:
         env:
           TOPIC: ${{ inputs.topic || 'The dancing plague of 1518' }}
           DURATION: ${{ inputs.duration || '6' }}
+          SCENES: ${{ inputs.scenes || '12' }}
+          VOICE: ${{ inputs.voice || 'af_heart' }}
+          RESOLUTION: ${{ inputs.resolution || '1280x720' }}
+          ANGLE: ${{ inputs.angle || '' }}
         run: |
           python - <<'PY'
           import os
@@ -56,9 +98,10 @@ jobs:
           result = render_documentary(
               topic=os.environ["TOPIC"],
               duration_minutes=duration,
-              scene_count=12,
-              voice="af_heart",
-              resolution="1280x720",
+              scene_count=int(os.environ["SCENES"]),
+              voice=os.environ["VOICE"],
+              resolution=os.environ["RESOLUTION"],
+              angle=os.environ.get("ANGLE", ""),
               output_dir=Path("output"),
           )
           print(result["report"])
