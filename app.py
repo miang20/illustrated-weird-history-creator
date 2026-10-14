@@ -15,11 +15,11 @@ st.info("No AI-provider API keys. The first full render downloads open model wei
 
 with st.sidebar:
     st.header("Production settings")
-    minutes = st.slider("Target duration", 5, 8, 6)
+    minutes = st.slider("Target duration", 5, 8, 5)
     voice = st.selectbox("Narrator", ["Warm female documentary (Kokoro af_heart)", "Warm male documentary (Kokoro am_michael)"])
-    scene_count = st.slider("AI scenes", 8, 18, 12)
-    resolution = st.selectbox("Export resolution", ["1280 × 720 (recommended for free CPU)", "1920 × 1080 (slower)"])
-    st.caption("16:9 landscape, 30 fps, H.264/AAC.")
+    scene_count = st.slider("AI scenes", 8, 36, 30, step=2)
+    resolution = st.selectbox("Export resolution", ["1920 × 1080 (Full HD)", "1280 × 720 (faster CPU export)"])
+    st.caption("16:9 landscape, 30 fps, H.264/AAC. More scenes increase image-generation time.")
 
 topic_choices = [
     "The Great Molasses Flood of 1919",
@@ -115,7 +115,7 @@ if generate:
         st.error("Enter a clear topic (at least 4 characters).")
         st.stop()
     voice_name = "af_heart" if voice.startswith("Warm female") else "am_michael"
-    output_size = "1280x720" if resolution.startswith("1280") else "1920x1080"
+    output_size = "1920x1080" if resolution.startswith("1920") else "1280x720"
     ok, message = dispatch(topic.strip(), minutes, scene_count, voice_name, output_size, angle.strip())
     if ok:
         st.success(message)
@@ -138,7 +138,7 @@ else:
     cols[0].metric("Duration", f"{minutes} min")
     cols[1].metric("AI scenes", str(scene_count))
     cols[2].metric("Narration", "Kokoro → Piper")
-    cols[3].metric("Format", "16:9 MP4")
+    cols[3].metric("Format", "1080p MP4" if resolution.startswith("1920") else "720p MP4")
     st.markdown("No upload is required. Enter a topic and the system researches it, builds narration, generates original illustrated scenes, then assembles a downloadable video.")
 
 st.divider()
