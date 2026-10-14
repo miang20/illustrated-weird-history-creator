@@ -163,7 +163,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     torch.set_num_threads(min(4, os.cpu_count() or 4))
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
-        model_id, torch_dtype=torch.float32, low_cpu_mem_usage=True
+        model_id, dtype=torch.float32, low_cpu_mem_usage=True
     ).to("cpu")
     model.eval()
     prompt_messages = [
@@ -205,28 +205,45 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         },
     ]
     prompt = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
-    encoded = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=6500)
-    with torch.inference_mode():
-        output = model.generate(
-            **encoded,
-            max_new_tokens=target_minutes * 135,
-            do_sample=True,
-            temperature=0.62,
-            top_p=0.88,
-            repetition_penalty=1.12,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-        )
-    generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+    paragraphs = []
+    issues = []
+    # A second concise generation attempt prevents one overlong or weak draft from
+    # failing the entire preview when the local model can correct itself.
+    for attempt in range(2):
+        attempt_prompt = prompt
+        if attempt:
+            attempt_prompt += (
+                "\n\nREVISION: The previous draft failed the quality gate. Write a fresh, "
+                "complete narration with a concrete opening hook, a genuinely new mid-story "
+                "rehook, evidence-led story development, and a complete payoff. "
+                f"Keep it strictly between {int(target_minutes * WORDS_PER_MINUTE * 0.90)} and "
+                f"{int(target_minutes * WORDS_PER_MINUTE * 1.08)} words. Do not add headings."
+            )
+        encoded = tokenizer(attempt_prompt, return_tensors="pt", truncation=True, max_length=6500)
+        with torch.inference_mode():
+            output = model.generate(
+                **encoded,
+                max_new_tokens=target_minutes * (135 if attempt == 0 else 125),
+                do_sample=True,
+                temperature=0.55 if attempt else 0.62,
+                top_p=0.88,
+                repetition_penalty=1.12,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+        generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+        generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
+        if len(paragraphs) < 6:
+            sentences = _sentences(generated)
+            paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
+        issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=extract)
+        if not issues:
+            break
+        print(f"Script quality gate attempt {attempt + 1} rejected narration: " + "; ".join(issues))
     del model, tokenizer
-    generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
-    if len(paragraphs) < 6:
-        sentences = _sentences(generated)
-        paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
-    issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=extract)
     if issues:
-        print("Script quality gate rejected narration: " + "; ".join(issues))
+        print("Script quality gate rejected narration after both attempts.")
         return None
     return paragraphs
 
