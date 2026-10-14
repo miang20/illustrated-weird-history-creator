@@ -16,12 +16,18 @@ MODEL_CANDIDATES = [
 
 def _scene_prompt(topic: str, paragraph: str, index: int) -> str:
     clean = re.sub(r"\s+", " ", paragraph).strip()[:480]
+    visual_directions = [
+        "cinematic wide historical scene with period-accurate people and architecture, dramatic natural light",
+        "antique cartographic illustration on aged parchment, hand-drawn coastlines and route lines, no readable labels",
+        "museum-quality close-up still life of historically appropriate objects, documents, tools and textures",
+        "expressive historical oil-painting composition showing a crowd reacting to an extraordinary event",
+    ]
+    direction = visual_directions[index % len(visual_directions)]
     return (
-        "Historically grounded cinematic editorial illustration for a serious weird-history documentary, "
-        "hand-painted realism, dramatic natural light, textured brushwork, rich muted ochre and deep teal palette, "
-        "period-appropriate clothing and architecture, strong visual composition, widescreen establishing shot, "
-        "no text, no letters, no watermark, not a modern photograph. "
-        f"Subject and context: {topic}. Scene {index + 1}: {clean}"
+        "Premium editorial illustration for a serious Weird History documentary, "
+        f"{direction}, hand-painted realism, textured brushwork, muted ochre and deep teal palette, "
+        "period-appropriate materials, strong composition, no text, no letters, no watermark, not a modern photograph. "
+        f"Historical topic: {topic}. Scene context: {clean}"
     )
 
 def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_count: int = 12) -> list[Path]:
