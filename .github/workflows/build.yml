@@ -117,4 +117,4 @@ jobs:
             output/**/render_report.json
             output/**/captions.srt
           if-no-files-found: error
-          retention-days: 2
+          retention-days: 7
