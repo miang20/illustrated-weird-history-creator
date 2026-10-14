@@ -128,7 +128,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
     words = sum(len(p.split()) for p in paragraphs)
     target = target_minutes * 132
-    if len(paragraphs) < 6 or not int(target * 0.85) <= words <= int(target * 1.3):
+    if len(paragraphs) < 6 or not int(target * 0.95) <= words <= int(target * 1.3):
         print(f"Local script model output did not meet length/structure checks ({words} words); using structured fallback.")
         return None
     return paragraphs
@@ -185,7 +185,7 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
         "Dates, places, and contemporary accounts help separate the event from myths and interpretations that grew afterward.",
     ]
     cursor = 0
-    while sum(len(p.split()) for p in paragraphs) < int(target_words * 0.88) and cursor < 16:
+    while sum(len(p.split()) for p in paragraphs) < int(target_words * 1.05) and cursor < 16:
         fact = selected[(cursor + 1) % len(selected)]
         paragraphs.insert(max(1, len(paragraphs)-1), f"{expansions[cursor % len(expansions)]} {fact}")
         cursor += 1
