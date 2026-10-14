@@ -206,8 +206,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     ]
     paragraphs = []
     issues = []
-    # A second concise generation attempt prevents one overlong or weak draft from
-    # failing the entire preview when the local model can correct itself.
+    # A second concise generation attempt repairs length, hook, and grounding issues
+    # before the preview is rejected and the expensive render is allowed to start.
     for attempt in range(2):
         attempt_messages = list(prompt_messages)
         if attempt:
