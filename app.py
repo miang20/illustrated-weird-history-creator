@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import io
+import zipfile
 from pathlib import Path
 
 import streamlit as st
@@ -45,6 +47,50 @@ def dispatch(topic_value: str, duration: int, scenes: int, voice_name: str, outp
         return True, "GitHub Actions accepted the render. Open Actions to monitor it and download the MP4 artifact."
     return False, f"GitHub dispatch failed ({response.status_code}): {response.text[:400]}"
 
+
+def configured_github_token() -> str:
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        try:
+            token = st.secrets.get("GITHUB_TOKEN", "")
+        except Exception:
+            token = ""
+    return token
+
+def fetch_latest_mp4(token: str):
+    import requests
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    runs_response = requests.get(
+        "https://api.github.com/repos/miang20/illustrated-weird-history-creator/actions/runs",
+        headers=headers, params={"branch": "main", "per_page": 20}, timeout=30,
+    )
+    runs_response.raise_for_status()
+    runs = runs_response.json().get("workflow_runs", [])
+    successful = [run for run in runs if run.get("path") == ".github/workflows/build.yml"
+                  and run.get("event") == "workflow_dispatch" and run.get("status") == "completed"
+                  and run.get("conclusion") == "success"]
+    if not successful:
+        raise RuntimeError("No successful manual render was found on main yet.")
+    run = successful[0]
+    artifacts_response = requests.get(
+        f"https://api.github.com/repos/miang20/illustrated-weird-history-creator/actions/runs/{run['id']}/artifacts",
+        headers=headers, timeout=30,
+    )
+    artifacts_response.raise_for_status()
+    artifact = next((a for a in artifacts_response.json().get("artifacts", [])
+                     if a.get("name") == "weird-history-mp4" and not a.get("expired")), None)
+    if not artifact:
+        raise RuntimeError("The latest successful run has no downloadable artifact; it may have expired.")
+    download = requests.get(artifact["archive_download_url"], headers=headers, timeout=180)
+    download.raise_for_status()
+    with zipfile.ZipFile(io.BytesIO(download.content)) as archive:
+        candidates = [name for name in archive.namelist() if name.endswith("final_weird_history.mp4")]
+        if not candidates:
+            raise RuntimeError("The artifact ZIP does not contain the final MP4.")
+        video_bytes = archive.read(candidates[0])
+    return video_bytes, run
+
+
 if generate:
     if len(topic.strip()) < 4:
         st.error("Enter a clear topic (at least 4 characters).")
@@ -75,3 +121,19 @@ else:
     cols[2].metric("Narration", "Kokoro → Piper")
     cols[3].metric("Format", "16:9 MP4")
     st.markdown("No upload is required. Enter a topic and the system researches it, builds narration, generates original illustrated scenes, then assembles a downloadable video.")
+
+st.divider()
+st.subheader("Download a finished render")
+token_for_download = configured_github_token()
+if token_for_download:
+    if st.button("Check latest completed MP4", use_container_width=True):
+        try:
+            with st.spinner("Checking GitHub Actions and retrieving the MP4…"):
+                video_bytes, completed_run = fetch_latest_mp4(token_for_download)
+            st.success(f"Ready: {completed_run.get('display_title', 'Weird History documentary')}")
+            st.download_button("Download final MP4", video_bytes, file_name="weird_history_final.mp4", mime="video/mp4", use_container_width=True)
+            st.link_button("View render logs", completed_run["html_url"])
+        except Exception as exc:
+            st.error(str(exc))
+else:
+    st.caption("Direct MP4 retrieval from this page requires optional GITHUB_TOKEN authorization. Without it, open the Actions run and download the artifact there.")
