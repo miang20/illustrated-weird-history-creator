@@ -101,7 +101,7 @@ def research_topic(topic: str) -> Research:
     )
     detail.raise_for_status()
     page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
-    extract = re.sub(r"\\s+", " ", page.get("extract", "")).strip()
+    extract = re.sub(r"\s+", " ", page.get("extract", "")).strip()
     actual_title = page.get("title", page_title)
     if len(extract) < 500:
         raise ValueError(f"The relevant article '{actual_title}' does not contain enough detail. Try a more specific topic.")
@@ -209,7 +209,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
 
 def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: int) -> list[str]:
     """Reject scripts that are too short, repetitive, generic, or disconnected from the subject."""
-    text = "\\n".join(paragraphs).strip()
+    text = "\n".join(paragraphs).strip()
     words = re.findall(r"[a-z0-9']+", text.lower())
     target = target_minutes * WORDS_PER_MINUTE
     issues: list[str] = []
