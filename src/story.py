@@ -261,13 +261,13 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     # Reject multi-word named entities that the selected research article does not support.
     # This catches fabricated people/places such as names introduced by a weak local model.
     if source_text:
-        source_lower = re.sub(r"\\s+", " ", source_text).casefold()
+        source_lower = re.sub(r"\s+", " ", source_text).casefold()
         sentence_starters = {
             "after", "across", "as", "at", "before", "by", "during", "for", "from",
             "he", "her", "his", "in", "it", "its", "on", "over", "she", "the", "these",
             "they", "this", "those", "through", "while", "when", "where", "which", "who",
         }
-        entities = re.findall(r"\\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\\s+(?:[A-Z][a-z]+(?:[-’'][A-Za-z]+)?|of|the|and)){1,3}\\b", text)
+        entities = re.findall(r"\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\s+(?:[A-Z][a-z]+(?:[-’'][A-Za-z]+)?|of|the|and)){1,3}\b", text)
         unsupported = []
         for entity in entities:
             words_in_entity = entity.split()
