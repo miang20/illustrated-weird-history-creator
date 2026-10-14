@@ -69,3 +69,25 @@ def test_script_quality_gate_rejects_short_generic_script():
     assert "target range" in joined
     assert "subject" in joined
     assert "opening hook" in joined
+
+
+
+def test_script_quality_gate_rejects_overlong_five_minute_narration():
+    paragraphs = [
+        "Halloween traditions changed over many centuries across different communities. " * 10
+    ]
+    issues = _script_quality_issues("Halloween", paragraphs, target_minutes=5)
+    assert any("target range 450-560" in issue for issue in issues)
+
+
+def test_source_grounding_does_not_misread_sentence_initial_title_case_as_a_name():
+    paragraphs = [
+        "The Terrifying Origins of Halloween are more complicated than popular legends suggest. " * 8
+    ]
+    issues = _script_quality_issues(
+        "The Terrifying Origins of Halloween",
+        paragraphs,
+        target_minutes=5,
+        source_text="Halloween developed from older seasonal customs in Europe.",
+    )
+    assert not any("multi-word names/places not found" in issue for issue in issues)
