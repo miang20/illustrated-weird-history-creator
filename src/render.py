@@ -105,7 +105,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     width,height = (1920,1080) if resolution == "1920x1080" else (1280,720)
     vf = f"subtitles='{subtitle_path}':force_style='FontName=DejaVu Sans,FontSize=22,Outline=2,Shadow=1,Alignment=2,MarginV=46',scale={width}:{height},setsar=1"
     _run(["ffmpeg","-y","-hide_banner","-loglevel","error","-i",str(visuals),"-i",str(narration),"-i",str(bed),
-        "-filter_complex","[2:a]volume=0.13[bg];[1:a][bg]amix=inputs=2:duration=first:weights=1 0.12, loudnorm=I=-16:TP=-1.5:LRA=11[a]",
+        "-filter_complex","[2:a]volume=0.13[bg];[1:a][bg]amix=inputs=2:duration=first:weights='1 0.12',loudnorm=I=-16:TP=-1.5:LRA=11[a]",
         "-vf",vf,"-map","0:v:0","-map","[a]","-c:v","libx264","-preset","veryfast","-crf","21",
         "-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",str(final_path)])
     probe = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration,size","-of","json",str(final_path)],
