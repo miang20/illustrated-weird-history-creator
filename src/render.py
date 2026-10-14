@@ -77,6 +77,12 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     for sub in ["audio","scenes","clips"]:
         (job_dir/sub).mkdir(parents=True,exist_ok=True)
     story = build_story(topic,duration_minutes,angle)
+    minimum_words = int(duration_minutes * 132 * 0.90)
+    if story.word_count < minimum_words:
+        raise RuntimeError(
+            f"Research/script produced only {story.word_count} words for a {duration_minutes}-minute target "
+            f"(minimum {minimum_words}). No TTS or image generation was started; choose a broader topic or retry."
+        )
     (job_dir/"script.txt").write_text("\n\n".join(story.paragraphs),encoding="utf-8")
     (job_dir/"sources.json").write_text(json.dumps(story.sources,indent=2),encoding="utf-8")
     (job_dir/"metadata.json").write_text(json.dumps({"topic":topic,"title":story.title,"target_minutes":duration_minutes,
