@@ -9,7 +9,7 @@ on:
         description: Historical topic for the documentary
         required: false
         type: string
-        default: ""
+        default: "The Terrifying Origins of Halloween"
       duration:
         description: Narration duration in minutes (5 to 8)
         required: true
@@ -47,10 +47,10 @@ on:
           - 1280x720
         default: 1920x1080
       angle:
-        description: Optional editorial angle
+        description: Editorial angle for the story (story structure is built in)
         required: false
         type: string
-        default: ""
+        default: "Trace how ancient seasonal customs evolved into the Halloween traditions people recognize today, separating well-supported history from later legends."
 
 permissions:
   contents: read
