@@ -140,20 +140,32 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         {
             "role": "system",
             "content": (
-                "You are a careful documentary writer. Write original, natural spoken English, not an encyclopedia article. "
-                "Do not invent dialogue, dates, motives, quotations, or events. Use only claims supported by the research notes. "
-                "Mark uncertainty honestly. Paraphrase the notes instead of copying their sentences. Avoid repeated filler and clichés. "
+                "You are an expert high-retention YouTube documentary storyteller specializing in strange, surprising real history. "
+                "Write original, natural spoken English that sounds excellent aloud, never like an encyclopedia entry. "
+                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, or events. Use only claims supported by the research notes. "
+                "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. "
+                "Every paragraph must either reveal a new fact, raise a meaningful question the evidence can answer, clarify stakes, or change the viewer's understanding. "
+                "Avoid filler, repetitive transitions, fake cliffhangers, generic moral lessons, and sensational claims unsupported by evidence. "
                 "No headings, bullet points, citations read aloud, or production directions. Output narration paragraphs only."
             ),
         },
         {
             "role": "user",
             "content": (
-                f"Write a high-retention {target_minutes}-minute Weird History documentary narration about: {title}. "
+                f"Write a high-retention {target_minutes}-minute Weird History YouTube documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
-                f"Aim for about {target_minutes * WORDS_PER_MINUTE} words. Open immediately with the most surprising specific verified fact, not a question, not 'Imagine', and not 'Today we are looking at'. The first two sentences must create curiosity without exaggeration. Use short, spoken-English sentences, clear chronology, "
-                "specific verified details, competing interpretations where supported, and a memorable conclusion. "
-                "Use 10 to 16 short paragraphs with natural spoken transitions. Do not overstate the evidence.\n\n"
+                f"Aim for about {target_minutes * WORDS_PER_MINUTE} words. Follow this story architecture without adding headings: "
+                "(1) COLD OPEN: begin with the most surprising specific verified fact and its immediate consequence; no question, no 'Imagine', no greeting. "
+                "(2) PROMISE: establish the central mystery or contradiction and why the answer matters, without giving away every payoff. "
+                "(3) CONTEXT: quickly orient the viewer in time, place, and the people involved. "
+                "(4) ESCALATION: reveal the best documented details in a clear cause-and-effect sequence; every paragraph adds new information. "
+                "(5) TURNING POINT: identify the moment when the situation changed, if the sources support one. "
+                "(6) EXPLANATION: compare plausible explanations or conflicting accounts only where research supports them; explain what evidence favors each. "
+                "(7) PAYOFF: resolve the opening curiosity as far as the evidence allows, then end on one specific, memorable historical implication rather than a generic lesson. "
+                "Use short, varied sentences and natural spoken transitions. Add a small curiosity bridge at paragraph endings only when the next paragraph genuinely answers or deepens it. "
+                "Avoid repetitive 'but here's the twist' phrasing, empty suspense, repeated facts, and modern assumptions projected onto historical people. "
+                "Keep 10 to 16 short paragraphs. Do not overstate evidence. "
+                "Before finishing, check that the opening is concrete, the middle keeps adding revelations, and the ending pays off the opening.\n\n"
                 f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:24000]}"
             ),
         },
