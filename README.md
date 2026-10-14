@@ -23,7 +23,7 @@ Free-first, no AI-provider API key, topic-to-16:9 documentary creator.
 Python 3.11 and FFmpeg recommended. Install requirements.txt and requirements-render.txt, then launch app.py with Streamlit.
 
 ## GitHub Actions
-Open Actions > Build Weird History Video > Run workflow, enter a topic, choose 5–8 minutes, then download the weird-history-mp4 artifact. Pushes run smoke tests only.
+Weekly schedule runs automatically with a rotating no-key topic. For an on-demand render, open Actions > Build Weird History Video > Run workflow, optionally enter a topic, choose 5–8 minutes, then download the weird-history-mp4 artifact. Pushes run smoke tests only.
 
 ## Voice policy
 Kokoro af_heart is primary; Piper en_US-lessac-medium is fallback. The code never silently substitutes eSpeak or another robotic system voice. If both neural engines fail, the render fails visibly.
