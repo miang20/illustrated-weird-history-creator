@@ -190,7 +190,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
                 f"STRICT LENGTH TARGET: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE)} words total, including all paragraphs. For a 5-minute video, aim for 450-500 words. Treat the upper number as a hard target, avoid extra explanations, and stop immediately after the payoff. Follow this story architecture without adding headings: "
                 "STORY BEATS, in this order and without headings: "
-                "(1) HOOK in paragraph 1: start inside the strangest documented moment or consequence, with a concrete detail and immediate stakes; no opening question, no 'Imagine', no greeting. "
+                "(1) HOOK in paragraph 1: start with a concrete, documented event or consequence and immediate stakes. Never begin with a question or phrases such as 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. No greeting. "
                 "(2) STORY in paragraphs 2-3: begin the narrative, identify the time/place/people, and explain what was at stake in plain spoken English. "
                 "(3) REHOOK around paragraph 4 or 5: introduce a new verified detail that changes what the viewer thinks is happening, raises a sharper question, or reveals an unexpected consequence. "
                 "Do not repeat the first hook; make this a genuine new development. "
@@ -279,18 +279,26 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     # sentence-initial title case (for example, 'The strange event changed everything').
     if source_text:
         source_lower = re.sub(r"\s+", " ", source_text).casefold()
+        # These established cultural/geographic terms may be omitted from a truncated
+        # overview article; they are not invented people or fabricated events.
+        accepted_contextual_entities = {
+            "united states", "all souls", "all saints", "catholic church", "christian church",
+            "north america", "western europe", "great britain", "northern ireland", "samhain",
+        }
         sentence_starters = {
             "after", "across", "as", "at", "before", "by", "during", "for", "from",
             "he", "her", "his", "in", "it", "its", "on", "over", "she", "the", "these",
             "they", "this", "those", "through", "while", "when", "where", "which", "who",
         }
-        entities = re.findall(r"\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\s+(?:[A-Z][a-z]+(?:[-’'][A-Za-z]+)?|of|the|and)){1,3}\b", text)
+        entities = re.findall(r"\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\s+(?:(?:of|the|and)\s+)?[A-Z][a-z]+(?:[-’'][A-Za-z]+)?){1,3}\b", text)
         unsupported = []
         for entity in entities:
             words_in_entity = entity.split()
             if words_in_entity[0].casefold() in sentence_starters:
                 continue
             entity = entity.strip()
+            if entity.casefold() in accepted_contextual_entities:
+                continue
             if len(entity.split()) < 2 or entity.casefold() not in source_lower:
                 if len(entity.split()) >= 2 and entity.casefold() not in source_lower and entity not in unsupported:
                     unsupported.append(entity)
