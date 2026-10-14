@@ -114,7 +114,7 @@ def research_topic(topic: str) -> Research:
         WIKI_API,
         params={
             "action": "query", "prop": "extracts|description", "explaintext": 1,
-            "exsectionformat": "plain", "exchars": 18000, "titles": page_title, "format": "json",
+            "exsectionformat": "plain", "exchars": 35000, "titles": page_title, "format": "json",
         },
         headers=HEADERS,
         timeout=25,
@@ -240,10 +240,27 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             )
         generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
         generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
+        # Small local models occasionally emit beat labels despite being told not to.
+        # Strip those labels so they never become spoken narration or false named entities.
+        generated = re.sub(
+            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|payoff|conclusion)\s*:?\s*$",
+            "",
+            generated,
+        )
+        generated = re.sub(
+            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|payoff|conclusion)\s*:\s*",
+            "",
+            generated,
+        ).strip()
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
-        if len(paragraphs) < 6:
+        if len(paragraphs) < 10:
             sentences = _sentences(generated)
-            paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
+            chunk_size = 2 if len(sentences) >= 16 else 3
+            paragraphs = [
+                " ".join(sentences[i:i+chunk_size])
+                for i in range(0, len(sentences), chunk_size)
+                if sentences[i:i+chunk_size]
+            ]
         issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=extract)
         if not issues:
             break
@@ -293,6 +310,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             "north america", "western europe", "great britain", "northern ireland", "samhain",
             "old irish", "evening of all saints", "native americans", "evening prayer", "evening mass",
             "roman catholic", "ancient celts", "celtic people", "gaelic language", "all hallows eve",
+            "ancient europe", "iron age", "pope gregory", "native american", "the new year", "world war",
         }
         sentence_starters = {
             "after", "across", "as", "at", "before", "by", "during", "for", "from",
