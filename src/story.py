@@ -72,6 +72,22 @@ def _sentences(text: str) -> list[str]:
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
+def _select_sentences_for_target(sentences: list[str], target_words: int) -> list[str]:
+    """Keep distinct source sentences until the fallback can support the requested runtime."""
+    selected: list[str] = []
+    words = 0
+    minimum = max(20, int(target_words * 0.86))
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        selected.append(sentence)
+        words += len(sentence.split())
+        if words >= minimum and len(selected) >= 20:
+            break
+    return selected
+
+
 def _generate_local_script(title: str, extract: str, target_minutes: int, angle: str) -> list[str] | None:
     """Use a small public local instruction model; never requires an inference API key."""
     import torch
@@ -139,16 +155,8 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     if len(sentences) < 6:
         raise ValueError("Research source did not contain enough distinct facts to build a documentary.")
     target_words = target_minutes * 132
-    # Select enough distinct source sentences to support the requested spoken duration.
-    # A fixed 6-sentences-per-minute cap produced very short fallback narrations.
-    selected = []
-    selected_words = 0
-    selection_floor = max(20, int(target_words * 0.86))
-    for sentence in sentences:
-        selected.append(sentence)
-        selected_words += len(sentence.split())
-        if selected_words >= selection_floor and len(selected) >= 20:
-            break
+    # A fixed 6-sentences-per-minute cap produced short fallback narrations.
+    selected = _select_sentences_for_target(sentences, target_words)
     title = research.title
     try:
         ai_paragraphs = _generate_local_script(title, research.extract, target_minutes, angle)
