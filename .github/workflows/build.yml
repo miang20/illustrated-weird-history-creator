@@ -72,7 +72,6 @@ jobs:
           python-version: "3.11"
       - name: Install FFmpeg and system text dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng libsndfile1
       - name: Install CPU PyTorch and neural voice/image dependencies
         run: |
