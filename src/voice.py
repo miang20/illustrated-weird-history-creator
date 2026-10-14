@@ -16,7 +16,7 @@ def _kokoro(paragraphs: list[str], out_dir: Path, voice: str) -> list[Path]:
     outputs = []
     for i, paragraph in enumerate(paragraphs):
         pieces = []
-        for _, _, audio in pipeline(paragraph, voice=voice, speed=0.96):
+        for _, _, audio in pipeline(paragraph, voice=voice, speed=1.04):
             if audio is not None:
                 arr = audio.detach().cpu().numpy() if hasattr(audio, "detach") else np.asarray(audio)
                 pieces.append(np.asarray(arr, dtype=np.float32).reshape(-1))
