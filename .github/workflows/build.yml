@@ -71,6 +71,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install FFmpeg and system text dependencies
+        run: sudo apt-get install -y ffmpeg espeak-ng libsndfile1
       - name: Verify runner media tools
         run: |
           ffmpeg -version
