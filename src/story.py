@@ -180,7 +180,7 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     for paragraph in paragraphs:
         if len(paragraph.split()) > 85:
             bucket = ""
-            for bit in re.split(r"(?<=[.!?])\\s+", paragraph):
+            for bit in re.split(r"(?<=[.!?])\s+", paragraph):
                 if len((bucket + " " + bit).split()) > 65 and bucket:
                     normalized.append(bucket.strip())
                     bucket = bit
