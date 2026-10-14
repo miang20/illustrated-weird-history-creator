@@ -17,6 +17,7 @@ class Research:
     url: str
     extract: str
     description: str
+    sources: list[dict[str, str]]
 
 @dataclass
 class Story:
@@ -50,23 +51,55 @@ def research_topic(topic: str) -> Research:
     topic = topic.strip()
     if len(topic) < 4:
         raise ValueError("Please enter a more specific historical topic.")
-    response = requests.get(WIKI_API, params={"action":"query","list":"search","srsearch":topic,"format":"json","srlimit":5}, headers=HEADERS, timeout=25)
+    response = requests.get(
+        WIKI_API,
+        params={"action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 6},
+        headers=HEADERS,
+        timeout=25,
+    )
     response.raise_for_status()
     results = response.json().get("query", {}).get("search", [])
     if not results:
         raise ValueError(f"No Wikipedia research result found for '{topic}'. Try a more specific topic.")
-    best = results[0]["title"]
-    detail = requests.get(WIKI_API, params={
-        "action":"query","prop":"extracts|description","explaintext":1,"exsectionformat":"plain",
-        "exchars":18000,"titles":best,"format":"json",
-    }, headers=HEADERS, timeout=25)
-    detail.raise_for_status()
-    page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
-    extract = re.sub(r"\s+", " ", page.get("extract", "")).strip()
-    if len(extract) < 350:
-        raise ValueError("The source page has too little factual detail. Try a broader or more specific topic.")
-    return Research(page.get("title", best), "https://en.wikipedia.org/wiki/" + quote(page.get("title", best).replace(" ", "_")), extract, page.get("description", ""))
 
+    extracts: list[str] = []
+    sources: list[dict[str, str]] = []
+    # One article can have a short introduction. Gather several search-matched pages
+    # so the no-key fallback has enough distinct facts for a 5–8 minute script.
+    for result in results[:6]:
+        page_title = result.get("title", "").strip()
+        if not page_title:
+            continue
+        try:
+            detail = requests.get(
+                WIKI_API,
+                params={
+                    "action": "query", "prop": "extracts|description", "explaintext": 1,
+                    "exsectionformat": "plain", "exchars": 6500, "titles": page_title, "format": "json",
+                },
+                headers=HEADERS,
+                timeout=25,
+            )
+            detail.raise_for_status()
+            page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
+            extract = re.sub(r"\s+", " ", page.get("extract", "")).strip()
+            actual_title = page.get("title", page_title)
+            if len(extract) < 180:
+                continue
+            extracts.append(f"RESEARCH PAGE: {actual_title}. {extract}")
+            sources.append({
+                "title": actual_title,
+                "url": "https://en.wikipedia.org/wiki/" + quote(actual_title.replace(" ", "_")),
+                "note": "Research reference; used for factual context, not read aloud.",
+            })
+        except requests.RequestException as exc:
+            print(f"Could not fetch related research page {page_title!r}: {type(exc).__name__}")
+
+    if not extracts:
+        raise ValueError("Wikipedia research pages did not provide enough factual detail. Try a broader or more specific topic.")
+    combined = "\n\n".join(extracts)
+    primary = sources[0]
+    return Research(primary["title"], primary["url"], combined, "", sources)
 def _sentences(text: str) -> list[str]:
     text = re.sub(r"\[[0-9]+\]", "", text)
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
@@ -76,7 +109,7 @@ def _select_sentences_for_target(sentences: list[str], target_words: int) -> lis
     """Keep distinct source sentences until the fallback can support the requested runtime."""
     selected: list[str] = []
     words = 0
-    minimum = max(20, int(target_words * 0.86))
+    minimum = max(20, int(target_words * 0.96))
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
@@ -118,7 +151,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 f"Aim for about {target_minutes * 132} words. Open immediately with the most surprising specific verified fact, not a question, not 'Imagine', and not 'Today we are looking at'. The first two sentences must create curiosity without exaggeration. Use short, spoken-English sentences, clear chronology, "
                 "specific verified details, competing interpretations where supported, and a memorable conclusion. "
                 "Use 10 to 16 short paragraphs with natural spoken transitions. Do not overstate the evidence.\n\n"
-                f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:10500]}"
+                f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:24000]}"
             ),
         },
     ]
@@ -164,11 +197,7 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
             return Story(
                 title=title,
                 paragraphs=ai_paragraphs,
-                sources=[{
-                    "title": research.title,
-                    "url": research.url,
-                    "note": "Source used as factual reference; narration generated locally and paraphrased.",
-                }],
+                sources=research.sources,
                 word_count=sum(len(p.split()) for p in ai_paragraphs),
             )
     except Exception as exc:
@@ -209,5 +238,5 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
                 normalized.append(bucket.strip())
         else:
             normalized.append(paragraph.strip())
-    source = [{"title": research.title, "url": research.url, "note": "Research reference; narration is a structured summary, not a quotation transcript."}]
+    source = research.sources
     return Story(title, normalized, source, sum(len(p.split()) for p in normalized))
