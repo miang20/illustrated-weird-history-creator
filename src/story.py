@@ -10,6 +10,9 @@ import requests
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "IllustratedWeirdHistoryCreator/1.0 (educational documentary generator)"}
+# Kokoro at the configured speed runs slower than the generic 132 wpm estimate.
+# This calibrated target leaves room for fallback transitions and closing narration.
+WORDS_PER_MINUTE = 100
 
 @dataclass
 class Research:
@@ -148,7 +151,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 f"Write a high-retention {target_minutes}-minute Weird History documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
-                f"Aim for about {target_minutes * 132} words. Open immediately with the most surprising specific verified fact, not a question, not 'Imagine', and not 'Today we are looking at'. The first two sentences must create curiosity without exaggeration. Use short, spoken-English sentences, clear chronology, "
+                f"Aim for about {target_minutes * WORDS_PER_MINUTE} words. Open immediately with the most surprising specific verified fact, not a question, not 'Imagine', and not 'Today we are looking at'. The first two sentences must create curiosity without exaggeration. Use short, spoken-English sentences, clear chronology, "
                 "specific verified details, competing interpretations where supported, and a memorable conclusion. "
                 "Use 10 to 16 short paragraphs with natural spoken transitions. Do not overstate the evidence.\n\n"
                 f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:24000]}"
@@ -176,7 +179,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         sentences = _sentences(generated)
         paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
     words = sum(len(p.split()) for p in paragraphs)
-    target = target_minutes * 132
+    target = target_minutes * WORDS_PER_MINUTE
     if len(paragraphs) < 6 or not int(target * 0.95) <= words <= int(target * 1.12):
         print(f"Local script model output did not meet length/structure checks ({words} words); using structured fallback.")
         return None
@@ -187,7 +190,7 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     sentences = _sentences(research.extract)
     if len(sentences) < 6:
         raise ValueError("Research source did not contain enough distinct facts to build a documentary.")
-    target_words = target_minutes * 132
+    target_words = target_minutes * WORDS_PER_MINUTE
     # A fixed 6-sentences-per-minute cap produced short fallback narrations.
     selected = _select_sentences_for_target(sentences, target_words)
     title = research.title
