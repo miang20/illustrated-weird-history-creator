@@ -1,0 +1,122 @@
+name: Build Weird History Video
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Historical topic for the documentary"
+        required: true
+        type: string
+        default: "The dancing plague of 1518"
+      duration:
+        description: "Narration duration in minutes"
+        required: true
+        type: choice
+        options: ["5", "6", "7", "8"]
+        default: "6"
+      scenes:
+        description: "Number of AI-generated scenes"
+        required: true
+        type: choice
+        options: ["8", "10", "12", "14", "16", "18"]
+        default: "12"
+      voice:
+        description: "Kokoro voice"
+        required: true
+        type: choice
+        options: ["af_heart", "am_michael"]
+        default: "af_heart"
+      resolution:
+        description: "Export resolution"
+        required: true
+        type: choice
+        options: ["1280x720", "1920x1080"]
+        default: "1280x720"
+      angle:
+        description: "Optional editorial angle"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weird-history-\${"$"}{{ github.workflow }}-\${"$"}{{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke-test:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: python -m compileall -q app.py src tests
+      - run: pytest -q
+
+  render:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      HF_HOME: \${"$"}{{ runner.temp }}/hf-cache
+      TOKENIZERS_PARALLELISM: "false"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install FFmpeg and system text dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng libsndfile1
+      - name: Install neural voice and image generation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-render.txt
+      - name: Render complete documentary
+        env:
+          TOPIC: \${"$"}{{ inputs.topic }}
+          DURATION: \${"$"}{{ inputs.duration }}
+          SCENES: \${"$"}{{ inputs.scenes }}
+          VOICE: \${"$"}{{ inputs.voice }}
+          RESOLUTION: \${"$"}{{ inputs.resolution }}
+          ANGLE: \${"$"}{{ inputs.angle }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from src.render import render_documentary
+          result = render_documentary(
+              topic=os.environ["TOPIC"],
+              duration_minutes=int(os.environ["DURATION"]),
+              scene_count=int(os.environ["SCENES"]),
+              voice=os.environ["VOICE"],
+              resolution=os.environ["RESOLUTION"],
+              angle=os.environ.get("ANGLE", ""),
+              output_dir=Path("output"),
+          )
+          print(result["report"])
+          PY
+      - name: Upload final MP4 and production notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: weird-history-mp4
+          path: |
+            output/**/final_weird_history.mp4
+            output/**/script.txt
+            output/**/sources.json
+            output/**/render_report.json
+            output/**/captions.srt
+          if-no-files-found: error
+          retention-days: 2

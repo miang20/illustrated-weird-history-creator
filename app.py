@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import streamlit as st
+
+ROOT = Path(__file__).resolve().parent
+st.set_page_config(page_title="Weird History Studio", page_icon="🎞️", layout="wide")
+st.title("🎞️ Illustrated Weird History Studio")
+st.caption("Topic → researched script → neural English narration → original AI scenes → cinematic 16:9 MP4")
+st.info("No AI-provider API keys. The first full render downloads open model weights and can be slow on CPU. Kokoro is primary; Piper is neural fallback.")
+
+with st.sidebar:
+    st.header("Production settings")
+    minutes = st.slider("Target duration", 5, 8, 6)
+    voice = st.selectbox("Narrator", ["Warm female documentary (Kokoro af_heart)", "Warm male documentary (Kokoro am_michael)"])
+    scene_count = st.slider("AI scenes", 8, 18, 12)
+    resolution = st.selectbox("Export resolution", ["1280 × 720 (recommended for free CPU)", "1920 × 1080 (slower)"])
+    st.caption("16:9 landscape, 30 fps, H.264/AAC.")
+
+topic = st.text_input("Documentary topic", placeholder="Example: The dancing plague of 1518")
+angle = st.text_area("Optional editorial angle", placeholder="Focus on strange theories and what historians actually know.", height=90)
+generate = st.button("Generate final MP4", type="primary", use_container_width=True)
+
+def dispatch(topic_value: str, duration: int, scenes: int, voice_name: str, output_size: str, angle_value: str) -> tuple[bool, str]:
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        try:
+            token = st.secrets.get("GITHUB_TOKEN", "")
+        except Exception:
+            token = ""
+    if not token:
+        return False, "No GITHUB_TOKEN configured for remote dispatch."
+    import requests
+    url = "https://api.github.com/repos/miang20/illustrated-weird-history-creator/actions/workflows/build.yml/dispatches"
+    response = requests.post(url, headers={
+        "Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }, json={"ref": "main", "inputs": {
+        "topic": topic_value, "duration": str(duration), "scenes": str(scenes),
+        "voice": voice_name, "resolution": output_size, "angle": angle_value[:500],
+    }}, timeout=30)
+    if response.status_code == 204:
+        return True, "GitHub Actions accepted the render. Open Actions to monitor it and download the MP4 artifact."
+    return False, f"GitHub dispatch failed ({response.status_code}): {response.text[:400]}"
+
+if generate:
+    if len(topic.strip()) < 4:
+        st.error("Enter a clear topic (at least 4 characters).")
+        st.stop()
+    voice_name = "af_heart" if voice.startswith("Warm female") else "am_michael"
+    output_size = "1280x720" if resolution.startswith("1280") else "1920x1080"
+    ok, message = dispatch(topic.strip(), minutes, scene_count, voice_name, output_size, angle.strip())
+    if ok:
+        st.success(message)
+        st.link_button("Open GitHub Actions", "https://github.com/miang20/illustrated-weird-history-creator/actions")
+    else:
+        st.warning(message)
+        st.markdown("Remote one-click mode needs a GitHub authorization token in Streamlit secrets (GITHUB_TOKEN). This is not an AI-provider key.")
+        st.link_button("Open manual GitHub workflow", "https://github.com/miang20/illustrated-weird-history-creator/actions/workflows/build.yml")
+        if os.environ.get("RUN_LOCAL_RENDER", "").lower() == "true":
+            from src.render import render_documentary
+            with st.status("Building the documentary on this machine…", expanded=True) as status:
+                result = render_documentary(topic.strip(), minutes, scene_count, voice_name, output_size, angle.strip(), ROOT / "output")
+                status.update(label="Render complete", state="complete")
+            st.video(str(result["video"]))
+            st.download_button("Download final MP4", result["video"].read_bytes(), file_name=result["video"].name, mime="video/mp4")
+        else:
+            st.caption("For local rendering, install requirements-render.txt and FFmpeg, then launch with RUN_LOCAL_RENDER=true.")
+else:
+    cols = st.columns(4)
+    cols[0].metric("Duration", f"{minutes} min")
+    cols[1].metric("AI scenes", str(scene_count))
+    cols[2].metric("Narration", "Kokoro → Piper")
+    cols[3].metric("Format", "16:9 MP4")
+    st.markdown("No upload is required. Enter a topic and the system researches it, builds narration, generates original illustrated scenes, then assembles a downloadable video.")

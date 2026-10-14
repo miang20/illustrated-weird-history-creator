@@ -1,0 +1,8 @@
+-r requirements.txt
+kokoro>=0.9,<1
+piper-tts>=1.2,<2
+diffusers>=0.31,<1
+transformers>=4.44,<5
+accelerate>=1.0,<2
+safetensors>=0.4,<1
+torch>=2.4
