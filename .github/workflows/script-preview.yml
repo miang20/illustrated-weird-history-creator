@@ -1,6 +1,14 @@
 name: Preview Documentary Script
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/story.py"
+      - "src/visuals.py"
+      - "src/render.py"
+      - "tests/**"
+      - ".github/workflows/script-preview.yml"
   workflow_dispatch:
     inputs:
       topic:
@@ -42,9 +50,9 @@ jobs:
           pip install "requests>=2.32,<3" "transformers>=4.44,<5" "accelerate>=1.0,<2" "safetensors>=0.4,<1"
       - name: Generate and validate narration only
         env:
-          TOPIC: ${{ inputs.topic }}
-          DURATION: ${{ inputs.duration }}
-          ANGLE: ${{ inputs.angle }}
+          TOPIC: ${{ inputs.topic || 'The Terrifying Origins of Halloween' }}
+          DURATION: ${{ inputs.duration || '5' }}
+          ANGLE: ${{ inputs.angle || 'Trace how ancient seasonal customs evolved into the Halloween traditions people recognize today, separating well-supported history from later legends.' }}
         run: |
           python - <<'PY'
           import json, os
