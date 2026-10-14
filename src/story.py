@@ -50,13 +50,24 @@ def weekly_topic() -> str:
     week_index = (date.today().isocalendar().week - 1) % len(WEEKLY_TOPICS)
     return WEEKLY_TOPICS[week_index]
 
+def _topic_terms(topic: str) -> set[str]:
+    ignored = {"the", "a", "an", "of", "and", "in", "on", "for", "history", "story", "documentary"}
+    return {word for word in re.findall(r"[a-z0-9]+", topic.lower()) if len(word) > 2 and word not in ignored}
+
+def _title_relevance(topic: str, title: str) -> float:
+    terms = _topic_terms(topic)
+    title_terms = set(re.findall(r"[a-z0-9]+", title.lower()))
+    if not terms:
+        return 0.0
+    return len(terms & title_terms) / len(terms)
+
 def research_topic(topic: str) -> Research:
     topic = topic.strip()
     if len(topic) < 4:
         raise ValueError("Please enter a more specific historical topic.")
     response = requests.get(
         WIKI_API,
-        params={"action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 6},
+        params={"action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 10},
         headers=HEADERS,
         timeout=25,
     )
@@ -65,44 +76,43 @@ def research_topic(topic: str) -> Research:
     if not results:
         raise ValueError(f"No Wikipedia research result found for '{topic}'. Try a more specific topic.")
 
-    extracts: list[str] = []
-    sources: list[dict[str, str]] = []
-    # One article can have a short introduction. Gather several search-matched pages
-    # so the no-key fallback has enough distinct facts for a 5–8 minute script.
-    for result in results[:6]:
-        page_title = result.get("title", "").strip()
-        if not page_title:
-            continue
-        try:
-            detail = requests.get(
-                WIKI_API,
-                params={
-                    "action": "query", "prop": "extracts|description", "explaintext": 1,
-                    "exsectionformat": "plain", "exchars": 6500, "titles": page_title, "format": "json",
-                },
-                headers=HEADERS,
-                timeout=25,
-            )
-            detail.raise_for_status()
-            page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
-            extract = re.sub(r"\s+", " ", page.get("extract", "")).strip()
-            actual_title = page.get("title", page_title)
-            if len(extract) < 180:
-                continue
-            extracts.append(f"RESEARCH PAGE: {actual_title}. {extract}")
-            sources.append({
-                "title": actual_title,
-                "url": "https://en.wikipedia.org/wiki/" + quote(actual_title.replace(" ", "_")),
-                "note": "Research reference; used for factual context, not read aloud.",
-            })
-        except requests.RequestException as exc:
-            print(f"Could not fetch related research page {page_title!r}: {type(exc).__name__}")
+    # Never concatenate arbitrary search results: that caused unrelated books, films and albums
+    # to be mixed into one narration. Pick one clearly relevant primary article.
+    ranked = sorted(
+        (result for result in results if result.get("title")),
+        key=lambda item: (_title_relevance(topic, item["title"]), -int(item.get("size", 0))),
+        reverse=True,
+    )
+    if not ranked or _title_relevance(topic, ranked[0]["title"]) < 0.34:
+        choices = ", ".join(item.get("title", "") for item in ranked[:4])
+        raise ValueError(
+            f"Could not confidently match '{topic}' to a relevant Wikipedia article. "
+            f"Closest results: {choices}. Please enter a more specific topic."
+        )
+    page_title = ranked[0]["title"].strip()
+    detail = requests.get(
+        WIKI_API,
+        params={
+            "action": "query", "prop": "extracts|description", "explaintext": 1,
+            "exsectionformat": "plain", "exchars": 18000, "titles": page_title, "format": "json",
+        },
+        headers=HEADERS,
+        timeout=25,
+    )
+    detail.raise_for_status()
+    page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
+    extract = re.sub(r"\\s+", " ", page.get("extract", "")).strip()
+    actual_title = page.get("title", page_title)
+    if len(extract) < 500:
+        raise ValueError(f"The relevant article '{actual_title}' does not contain enough detail. Try a more specific topic.")
+    url = "https://en.wikipedia.org/wiki/" + quote(actual_title.replace(" ", "_"))
+    source = {
+        "title": actual_title,
+        "url": url,
+        "note": "Primary research reference; verify important claims before publication.",
+    }
+    return Research(actual_title, url, extract, page.get("description", "") or "", [source])
 
-    if not extracts:
-        raise ValueError("Wikipedia research pages did not provide enough factual detail. Try a broader or more specific topic.")
-    combined = "\n\n".join(extracts)
-    primary = sources[0]
-    return Research(primary["title"], primary["url"], combined, "", sources)
 def _sentences(text: str) -> list[str]:
     text = re.sub(r"\[[0-9]+\]", "", text)
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
