@@ -84,6 +84,8 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     voice_seconds = sum(durations)+max(0,len(durations)-1)*0.24
     if voice_seconds < duration_minutes*60*0.82:
         raise RuntimeError(f"Narration is only {voice_seconds/60:.1f} minutes; target is {duration_minutes}. Refusing to create a falsely labelled short video.")
+    if voice_seconds > duration_minutes*60*1.15:
+        raise RuntimeError(f"Narration is {voice_seconds/60:.1f} minutes, too long for the selected {duration_minutes}-minute target.")
     images = generate_scenes(topic,story.paragraphs,job_dir/"scenes",scene_count)
     total_seconds, per_scene = voice_seconds, voice_seconds/len(images)
     clips = []
@@ -112,8 +114,10 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
                            check=True,text=True,stdout=subprocess.PIPE)
     media = json.loads(probe.stdout)["format"]
     video_seconds = float(media["duration"])
-    if video_seconds < duration_minutes*60*0.65:
+    if video_seconds < duration_minutes*60*0.82:
         raise RuntimeError(f"Final MP4 is too short ({video_seconds/60:.1f} minutes).")
+    if video_seconds > duration_minutes*60*1.15:
+        raise RuntimeError(f"Final MP4 is too long ({video_seconds/60:.1f} minutes).")
     report = {"title":story.title,"topic":topic,"video":str(final_path),"duration_seconds":round(video_seconds,2),
         "word_count":story.word_count,"voice_engine":voice_engine,"scene_count":len(images),"resolution":resolution,
         "size_bytes":int(media["size"]),"sources":story.sources}
