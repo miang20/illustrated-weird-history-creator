@@ -139,7 +139,16 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     if len(sentences) < 6:
         raise ValueError("Research source did not contain enough distinct facts to build a documentary.")
     target_words = target_minutes * 132
-    selected = sentences[:min(len(sentences), max(16, target_minutes * 6))]
+    # Select enough distinct source sentences to support the requested spoken duration.
+    # A fixed 6-sentences-per-minute cap produced very short fallback narrations.
+    selected = []
+    selected_words = 0
+    selection_floor = max(20, int(target_words * 0.86))
+    for sentence in sentences:
+        selected.append(sentence)
+        selected_words += len(sentence.split())
+        if selected_words >= selection_floor and len(selected) >= 20:
+            break
     title = research.title
     try:
         ai_paragraphs = _generate_local_script(title, research.extract, target_minutes, angle)
