@@ -130,10 +130,14 @@ if token_for_download:
         try:
             with st.spinner("Checking GitHub Actions and retrieving the MP4…"):
                 video_bytes, completed_run = fetch_latest_mp4(token_for_download)
-            st.success(f"Ready: {completed_run.get('display_title', 'Weird History documentary')}")
-            st.download_button("Download final MP4", video_bytes, file_name="weird_history_final.mp4", mime="video/mp4", use_container_width=True)
-            st.link_button("View render logs", completed_run["html_url"])
+            st.session_state["latest_mp4_bytes"] = video_bytes
+            st.session_state["latest_mp4_title"] = completed_run.get("display_title", "Weird History documentary")
+            st.session_state["latest_mp4_run_url"] = completed_run["html_url"]
         except Exception as exc:
             st.error(str(exc))
+    if st.session_state.get("latest_mp4_bytes"):
+        st.success(f"Ready: {st.session_state.get('latest_mp4_title', 'Weird History documentary')}")
+        st.download_button("Download final MP4", st.session_state["latest_mp4_bytes"], file_name="weird_history_final.mp4", mime="video/mp4", use_container_width=True, key="download_latest_mp4")
+        st.link_button("View render logs", st.session_state["latest_mp4_run_url"])
 else:
     st.caption("Direct MP4 retrieval from this page requires optional GITHUB_TOKEN authorization. Without it, open the Actions run and download the artifact there.")
