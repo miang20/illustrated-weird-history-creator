@@ -188,7 +188,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 f"Write a high-retention {target_minutes}-minute Weird History YouTube documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
-                f"STRICT LENGTH LIMIT: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE * 1.05)} words total, including all paragraphs. For a 5-minute video, write 450-525 words; never write 700+ words. Aim near {int(target_minutes * WORDS_PER_MINUTE)} words and stop after the payoff. Follow this story architecture without adding headings: "
+                f"STRICT LENGTH TARGET: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE)} words total, including all paragraphs. For a 5-minute video, aim for 450-500 words. Treat the upper number as a hard target, avoid extra explanations, and stop immediately after the payoff. Follow this story architecture without adding headings: "
                 "STORY BEATS, in this order and without headings: "
                 "(1) HOOK in paragraph 1: start inside the strangest documented moment or consequence, with a concrete detail and immediate stakes; no opening question, no 'Imagine', no greeting. "
                 "(2) STORY in paragraphs 2-3: begin the narrative, identify the time/place/people, and explain what was at stake in plain spoken English. "
@@ -239,8 +239,8 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     issues: list[str] = []
     if len(paragraphs) < 8:
         issues.append(f"only {len(paragraphs)} narration paragraphs; need at least 8")
-    if not int(target * 0.90) <= len(words) <= int(target * 1.12):
-        issues.append(f"{len(words)} words is outside the target range {int(target * 0.90)}-{int(target * 1.12)}")
+    if not int(target * 0.90) <= len(words) <= int(target * 1.18):
+        issues.append(f"{len(words)} words is outside the target range {int(target * 0.90)}-{int(target * 1.18)}")
     terms = _topic_terms(title)
     word_set = set(words)
     if terms and len(terms & word_set) < max(1, (len(terms) + 1) // 2):
