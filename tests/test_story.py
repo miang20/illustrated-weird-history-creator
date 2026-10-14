@@ -1,4 +1,4 @@
-from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, weekly_topic, WEEKLY_TOPICS
+from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, _script_quality_issues, _title_relevance, weekly_topic, WEEKLY_TOPICS
 
 def test_sentence_splitter_returns_distinct_facts():
     result = _sentences("The event began in 1518. It affected several people in the city. Historians still debate the causes of the event.")
