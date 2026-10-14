@@ -47,7 +47,7 @@ def research_topic(topic: str) -> Research:
 def _sentences(text: str) -> list[str]:
     text = re.sub(r"\[[0-9]+\]", "", text)
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
-    return [p.strip() for p in parts if len(p.strip()) > 45]
+    return [p.strip() for p in parts if len(p.strip()) > 20]
 
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     research = research_topic(topic)
