@@ -54,8 +54,8 @@ def _render_scene(image: Path, duration: float, destination: Path, resolution: s
     width, height = (1920,1080) if resolution == "1920x1080" else (1280,720)
     frames = max(1, int(math.ceil(duration*30)))
     # Each short shot reframes the source image differently, so a generated still never sits unchanged for 20+ seconds.
-    x_expr = ["iw/2-(iw/zoom/2)", "0", "iw-iw/zoom", "(iw-iw/zoom)*on/max(1,\" + str(frames) + \"-1)"][variant % 4]
-    y_expr = ["ih/2-(ih/zoom/2)", "0", "ih-ih/zoom", "(ih-ih/zoom)*on/max(1,\" + str(frames) + \"-1)"][variant % 4]
+    x_expr = ["iw/2-(iw/zoom/2)", "0", "iw-iw/zoom", "(iw-iw/zoom)*0.35*(1+sin(on/18))"][variant % 4]
+    y_expr = ["ih/2-(ih/zoom/2)", "0", "ih-ih/zoom", "(ih-ih/zoom)*0.35*(1+sin(on/22))"][variant % 4]
     zoom_expr = "min(zoom+0.0012,1.075)" if variant % 2 == 0 else "if(lte(zoom,1.001),1.075,max(1.0,zoom-0.0012))"
     vf = (f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},"
           f"zoompan=z='{zoom_expr}':d=1:x='{x_expr}':y='{y_expr}':s={width}x{height}:fps=30,"
@@ -99,7 +99,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     for i in range(shot_count):
         clip = job_dir/"clips"/f"clip_{i:03d}.mp4"
         duration = min(shot_seconds, total_seconds - i*shot_seconds)
-        image = images[(i * len(images)) // shot_count]
+        image = images[i % len(images)]
         _render_scene(image, duration, clip, resolution, variant=i)
         clips.append(clip)
     concat_file = job_dir/"concat.txt"
