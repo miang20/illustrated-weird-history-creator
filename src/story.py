@@ -209,7 +209,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     with torch.inference_mode():
         output = model.generate(
             **encoded,
-            max_new_tokens=target_minutes * 145,
+            max_new_tokens=target_minutes * 135,
             do_sample=True,
             temperature=0.62,
             top_p=0.88,
@@ -239,8 +239,8 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     issues: list[str] = []
     if len(paragraphs) < 8:
         issues.append(f"only {len(paragraphs)} narration paragraphs; need at least 8")
-    if not int(target * 0.90) <= len(words) <= int(target * 1.18):
-        issues.append(f"{len(words)} words is outside the target range {int(target * 0.90)}-{int(target * 1.18)}")
+    if not int(target * 0.90) <= len(words) <= int(target * 1.12):
+        issues.append(f"{len(words)} words is outside the target range {int(target * 0.90)}-{int(target * 1.12)}")
     terms = _topic_terms(title)
     word_set = set(words)
     if terms and len(terms & word_set) < max(1, (len(terms) + 1) // 2):
@@ -258,8 +258,8 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     found_filler = [phrase for phrase in filler_phrases if lower_text.count(phrase) > 0]
     if found_filler:
         issues.append("generic filler detected: " + ", ".join(found_filler))
-    # Reject multi-word named entities that the selected research article does not support.
-    # This catches fabricated people/places such as names introduced by a weak local model.
+    # Reject unsupported multi-word named entities while avoiding false positives from
+    # sentence-initial title case (for example, 'The strange event changed everything').
     if source_text:
         source_lower = re.sub(r"\s+", " ", source_text).casefold()
         sentence_starters = {
@@ -272,7 +272,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
         for entity in entities:
             words_in_entity = entity.split()
             if words_in_entity[0].casefold() in sentence_starters:
-                entity = " ".join(words_in_entity[1:])
+                continue
             entity = entity.strip()
             if len(entity.split()) < 2 or entity.casefold() not in source_lower:
                 if len(entity.split()) >= 2 and entity.casefold() not in source_lower and entity not in unsupported:
