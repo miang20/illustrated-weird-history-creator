@@ -56,8 +56,11 @@ def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_coun
     out_dir.mkdir(parents=True, exist_ok=True)
     if not paragraphs:
         raise ValueError("No narration paragraphs were supplied for scene generation.")
-    count = max(8, min(scene_count, 36, len(paragraphs)))
-    indices = sorted(set(round(i * (len(paragraphs)-1) / max(1, count-1)) for i in range(count)))
+    # Honour the requested number of shots even when the script has fewer paragraphs.
+    # Several distinct shot designs can illustrate one paragraph; set() here previously
+    # silently reduced a requested 30-scene video to only 10-16 images.
+    count = max(8, min(scene_count, 36))
+    indices = [round(i * (len(paragraphs) - 1) / max(1, count - 1)) for i in range(count)]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     last_error = None
@@ -77,6 +80,7 @@ def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_coun
                 target = out_dir / f"scene_{n:03d}.jpg"
                 image = pipe(
                     prompt=_scene_prompt(topic, paragraphs[paragraph_index], n),
+                    negative_prompt=NEGATIVE_DIRECTION,
                     num_inference_steps=steps,
                     guidance_scale=guidance,
                     width=model_width,
