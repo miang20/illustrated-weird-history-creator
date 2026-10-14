@@ -1,9 +1,6 @@
 name: Build Weird History Video
 
 on:
-  push:
-    branches:
-      - integration-check
   workflow_dispatch:
     inputs:
       topic:
