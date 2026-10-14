@@ -2,40 +2,55 @@ name: Build Weird History Video
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       topic:
-        description: "Historical topic for the documentary"
+        description: Historical topic for the documentary
         required: true
         type: string
-        default: "The dancing plague of 1518"
+        default: The dancing plague of 1518
       duration:
-        description: "Narration duration in minutes"
+        description: Narration duration in minutes
         required: true
         type: choice
-        options: ["5", "6", "7", "8"]
+        options:
+          - "5"
+          - "6"
+          - "7"
+          - "8"
         default: "6"
       scenes:
-        description: "Number of AI-generated scenes"
+        description: Number of AI-generated scenes
         required: true
         type: choice
-        options: ["8", "10", "12", "14", "16", "18"]
+        options:
+          - "8"
+          - "10"
+          - "12"
+          - "14"
+          - "16"
+          - "18"
         default: "12"
       voice:
-        description: "Kokoro voice"
+        description: Kokoro voice
         required: true
         type: choice
-        options: ["af_heart", "am_michael"]
-        default: "af_heart"
+        options:
+          - af_heart
+          - am_michael
+        default: af_heart
       resolution:
-        description: "Export resolution"
+        description: Export resolution
         required: true
         type: choice
-        options: ["1280x720", "1920x1080"]
-        default: "1280x720"
+        options:
+          - 1280x720
+          - 1920x1080
+        default: 1280x720
       angle:
-        description: "Optional editorial angle"
+        description: Optional editorial angle
         required: false
         type: string
         default: ""
@@ -43,13 +58,9 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: weird-history-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   smoke-test:
-    if: github.event_name == 'push'
+    if: \${"$"}{{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -57,17 +68,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
       - run: pip install -r requirements.txt pytest
       - run: python -m compileall -q app.py src tests
       - run: pytest -q
 
   render:
-    if: github.event_name == 'workflow_dispatch'
+    if: \${"$"}{{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      HF_HOME: ${{ runner.temp }}/hf-cache
+      HF_HOME: \${"$"}{{ runner.temp }}/hf-cache
       TOKENIZERS_PARALLELISM: "false"
       PYTHONUNBUFFERED: "1"
     steps:
@@ -75,7 +85,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
       - name: Install FFmpeg and system text dependencies
         run: |
           sudo apt-get update
@@ -86,13 +95,14 @@ jobs:
           pip install "torch>=2.4" --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements-render.txt
       - name: Render complete documentary
+        if: \${"$"}{{ github.event_name == 'workflow_dispatch' }}
         env:
-          TOPIC: ${{ inputs.topic }}
-          DURATION: ${{ inputs.duration }}
-          SCENES: ${{ inputs.scenes }}
-          VOICE: ${{ inputs.voice }}
-          RESOLUTION: ${{ inputs.resolution }}
-          ANGLE: ${{ inputs.angle }}
+          TOPIC: \${"$"}{{ inputs.topic }}
+          DURATION: \${"$"}{{ inputs.duration }}
+          SCENES: \${"$"}{{ inputs.scenes }}
+          VOICE: \${"$"}{{ inputs.voice }}
+          RESOLUTION: \${"$"}{{ inputs.resolution }}
+          ANGLE: \${"$"}{{ inputs.angle }}
         run: |
           python - <<'PY'
           import os
