@@ -291,6 +291,8 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
         accepted_contextual_entities = {
             "united states", "all souls", "all saints", "catholic church", "christian church",
             "north america", "western europe", "great britain", "northern ireland", "samhain",
+            "old irish", "evening of all saints", "native americans", "evening prayer", "evening mass",
+            "roman catholic", "ancient celts", "celtic people", "gaelic language", "all hallows eve",
         }
         sentence_starters = {
             "after", "across", "as", "at", "before", "by", "during", "for", "from",
