@@ -21,7 +21,7 @@ def test_fallback_sentence_selection_scales_to_requested_runtime():
     ]
     selected = _select_sentences_for_target(sentences, target_words=660)
     assert len(selected) >= 20
-    assert sum(len(sentence.split()) for sentence in selected) >= int(660 * 0.86)
+    assert sum(len(sentence.split()) for sentence in selected) >= int(660 * 0.96)
     assert len(set(selected)) == len(selected)
 
 
