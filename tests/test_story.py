@@ -35,3 +35,21 @@ def test_narration_word_target_uses_calibrated_kokoro_pace():
     assert WORDS_PER_MINUTE == 100
     assert 5 * WORDS_PER_MINUTE == 500
     assert 8 * WORDS_PER_MINUTE == 800
+
+
+def test_research_title_relevance_distinguishes_subjects():
+    assert _title_relevance("The Great Molasses Flood of 1919", "The Great Molasses Flood") >= 0.75
+    assert _title_relevance("The Great Molasses Flood of 1919", "A completely unrelated article") == 0.0
+
+
+def test_script_quality_gate_rejects_short_generic_script():
+    issues = _script_quality_issues(
+        "The Great Molasses Flood of 1919",
+        ["Imagine a story where everything changes overnight."],
+        target_minutes=5,
+    )
+    joined = " ".join(issues).lower()
+    assert "paragraphs" in joined
+    assert "target range" in joined
+    assert "subject" in joined
+    assert "opening hook" in joined
