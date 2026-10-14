@@ -27,17 +27,28 @@ def _caption_file(paragraphs: list[str], durations: list[float], destination: Pa
         s, ms = divmod(rem, 1000)
         return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
     lines, cursor, index = [], 0.0, 1
+    def speech_weight(word: str) -> float:
+        # Syllable-weighted timing is closer to natural speech than equal time per word.
+        clean = re.sub(r"[^A-Za-z']", "", word).lower()
+        groups = re.findall(r"[aeiouy]+", clean)
+        syllables = max(1, len(groups) - (1 if clean.endswith("e") and len(groups) > 1 else 0))
+        pause = 0.35 if word.endswith((".", "!", "?")) else 0.16 if word.endswith((",", ";", ":")) else 0.0
+        return float(syllables) + pause
     for paragraph, duration in zip(paragraphs, durations):
         words = paragraph.split()
-        chunks = [words[i:i+5] for i in range(0, len(words), 5)]
-        total_words, used = max(1, len(words)), 0
-        for chunk in chunks:
-            start = cursor + duration * used / total_words
-            used += len(chunk)
-            end = cursor + duration * used / total_words
-            if end-start < 0.35:
-                end = min(cursor+duration, start+0.35)
-            lines.append(f"{index}\n{stamp(start)} --> {stamp(end)}\n{' '.join(chunk)}\n")
+        weights = [speech_weight(word) for word in words]
+        total_weight = max(1.0, sum(weights))
+        chunks = [list(range(i, min(i + 5, len(words)))) for i in range(0, len(words), 5)]
+        used_weight = 0.0
+        for positions in chunks:
+            chunk_weight = sum(weights[i] for i in positions)
+            start = cursor + duration * used_weight / total_weight
+            used_weight += chunk_weight
+            end = cursor + duration * used_weight / total_weight
+            # Tiny delay avoids captions leading the first audible consonant.
+            start = min(end - 0.25, start + 0.08)
+            end = max(start + 0.25, end - 0.03)
+            lines.append(f"{index}\n{stamp(start)} --> {stamp(end)}\n{' '.join(words[i] for i in positions)}\n")
             index += 1
         cursor += duration + gap
     destination.write_text("\n".join(lines), encoding="utf-8")
