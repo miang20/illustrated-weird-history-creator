@@ -1,6 +1,11 @@
 name: Preview Documentary Script
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/story.py"
+      - ".github/workflows/script-preview.yml"
   workflow_dispatch:
     inputs:
       topic:
