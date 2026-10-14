@@ -82,7 +82,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     narration = job_dir/"narration.wav"
     concatenate_audio(audio_paths,narration)
     voice_seconds = sum(durations)+max(0,len(durations)-1)*0.24
-    if voice_seconds < duration_minutes*60*0.65:
+    if voice_seconds < duration_minutes*60*0.82:
         raise RuntimeError(f"Narration is only {voice_seconds/60:.1f} minutes; target is {duration_minutes}. Refusing to create a falsely labelled short video.")
     images = generate_scenes(topic,story.paragraphs,job_dir/"scenes",scene_count)
     total_seconds, per_scene = voice_seconds, voice_seconds/len(images)
