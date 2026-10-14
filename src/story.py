@@ -204,21 +204,28 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             ),
         },
     ]
-    prompt = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
     paragraphs = []
     issues = []
     # A second concise generation attempt prevents one overlong or weak draft from
     # failing the entire preview when the local model can correct itself.
     for attempt in range(2):
-        attempt_prompt = prompt
+        attempt_messages = list(prompt_messages)
         if attempt:
-            attempt_prompt += (
-                "\n\nREVISION: The previous draft failed the quality gate. Write a fresh, "
-                "complete narration with a concrete opening hook, a genuinely new mid-story "
-                "rehook, evidence-led story development, and a complete payoff. "
-                f"Keep it strictly between {int(target_minutes * WORDS_PER_MINUTE * 0.90)} and "
-                f"{int(target_minutes * WORDS_PER_MINUTE * 1.08)} words. Do not add headings."
-            )
+            attempt_messages.append({
+                "role": "user",
+                "content": (
+                    "REVISION: The previous draft failed the quality gate. Write a fresh, "
+                    "complete narration with a concrete, documented opening hook, a genuinely "
+                    "new mid-story rehook, evidence-led story development, and a complete payoff. "
+                    f"Keep it strictly between {int(target_minutes * WORDS_PER_MINUTE * 0.90)} and "
+                    f"{int(target_minutes * WORDS_PER_MINUTE * 1.08)} words. Never start with a generic "
+                    "question or 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. "
+                    "Do not add headings."
+                ),
+            })
+        attempt_prompt = tokenizer.apply_chat_template(
+            attempt_messages, tokenize=False, add_generation_prompt=True
+        )
         encoded = tokenizer(attempt_prompt, return_tensors="pt", truncation=True, max_length=6500)
         with torch.inference_mode():
             output = model.generate(
