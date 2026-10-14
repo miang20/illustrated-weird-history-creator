@@ -224,14 +224,14 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     if len(paragraphs) < 6:
         sentences = _sentences(generated)
         paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
-    issues = _script_quality_issues(title, paragraphs, target_minutes)
+    issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=extract)
     if issues:
         print("Script quality gate rejected narration: " + "; ".join(issues))
         return None
     return paragraphs
 
 
-def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: int) -> list[str]:
+def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: int, source_text: str = "") -> list[str]:
     """Reject scripts that are too short, repetitive, generic, or disconnected from the subject."""
     text = "\n".join(paragraphs).strip()
     words = re.findall(r"[a-z0-9']+", text.lower())
@@ -258,6 +258,27 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     found_filler = [phrase for phrase in filler_phrases if lower_text.count(phrase) > 0]
     if found_filler:
         issues.append("generic filler detected: " + ", ".join(found_filler))
+    # Reject multi-word named entities that the selected research article does not support.
+    # This catches fabricated people/places such as names introduced by a weak local model.
+    if source_text:
+        source_lower = re.sub(r"\\s+", " ", source_text).casefold()
+        sentence_starters = {
+            "after", "across", "as", "at", "before", "by", "during", "for", "from",
+            "he", "her", "his", "in", "it", "its", "on", "over", "she", "the", "these",
+            "they", "this", "those", "through", "while", "when", "where", "which", "who",
+        }
+        entities = re.findall(r"\\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\\s+(?:[A-Z][a-z]+(?:[-’'][A-Za-z]+)?|of|the|and)){1,3}\\b", text)
+        unsupported = []
+        for entity in entities:
+            words_in_entity = entity.split()
+            if words_in_entity[0].casefold() in sentence_starters:
+                entity = " ".join(words_in_entity[1:])
+            entity = entity.strip()
+            if len(entity.split()) < 2 or entity.casefold() not in source_lower:
+                if len(entity.split()) >= 2 and entity.casefold() not in source_lower and entity not in unsupported:
+                    unsupported.append(entity)
+        if unsupported:
+            issues.append("multi-word names/places not found in the selected research source: " + ", ".join(unsupported[:6]))
     first = paragraphs[0].strip().lower() if paragraphs else ""
     if first.startswith(("imagine ", "have you ever wondered", "what if ", "did you know")):
         issues.append("the opening hook is generic rather than a concrete documented moment")
