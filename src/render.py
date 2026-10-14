@@ -29,7 +29,7 @@ def _caption_file(paragraphs: list[str], durations: list[float], destination: Pa
     lines, cursor, index = [], 0.0, 1
     for paragraph, duration in zip(paragraphs, durations):
         words = paragraph.split()
-        chunks = [words[i:i+4] for i in range(0, len(words), 4)]
+        chunks = [words[i:i+5] for i in range(0, len(words), 5)]
         total_words, used = max(1, len(words)), 0
         for chunk in chunks:
             start = cursor + duration * used / total_words
