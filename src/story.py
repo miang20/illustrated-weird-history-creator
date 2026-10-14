@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import date
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -23,6 +24,27 @@ class Story:
     paragraphs: list[str]
     sources: list[dict[str, str]]
     word_count: int
+
+
+WEEKLY_TOPICS = [
+    "The dancing plague of 1518",
+    "The Great Molasses Flood of 1919",
+    "The Cadaver Synod",
+    "The London Beer Flood of 1814",
+    "The Mary Celeste mystery",
+    "The Year Without a Summer",
+    "The Great Emu War",
+    "The Boston Molasses Disaster",
+    "The Defenestrations of Prague",
+    "The Tunguska event",
+    "The Great Stink of London",
+    "The War of the Stray Dog",
+]
+
+def weekly_topic() -> str:
+    """Choose a deterministic, researchable weird-history topic for the current ISO week."""
+    week_index = (date.today().isocalendar().week - 1) % len(WEEKLY_TOPICS)
+    return WEEKLY_TOPICS[week_index]
 
 def research_topic(topic: str) -> Research:
     topic = topic.strip()
