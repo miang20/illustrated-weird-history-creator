@@ -59,7 +59,9 @@ def configured_github_token() -> str:
 
 def fetch_latest_mp4(token: str):
     import requests
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     runs_response = requests.get(
         "https://api.github.com/repos/miang20/illustrated-weird-history-creator/actions/runs",
         headers=headers, params={"branch": "main", "per_page": 20}, timeout=30,
@@ -125,19 +127,18 @@ else:
 st.divider()
 st.subheader("Download a finished render")
 token_for_download = configured_github_token()
-if token_for_download:
-    if st.button("Check latest completed MP4", use_container_width=True):
-        try:
-            with st.spinner("Checking GitHub Actions and retrieving the MP4…"):
-                video_bytes, completed_run = fetch_latest_mp4(token_for_download)
-            st.session_state["latest_mp4_bytes"] = video_bytes
-            st.session_state["latest_mp4_title"] = completed_run.get("display_title", "Weird History documentary")
-            st.session_state["latest_mp4_run_url"] = completed_run["html_url"]
-        except Exception as exc:
-            st.error(str(exc))
-    if st.session_state.get("latest_mp4_bytes"):
-        st.success(f"Ready: {st.session_state.get('latest_mp4_title', 'Weird History documentary')}")
-        st.download_button("Download final MP4", st.session_state["latest_mp4_bytes"], file_name="weird_history_final.mp4", mime="video/mp4", use_container_width=True, key="download_latest_mp4")
-        st.link_button("View render logs", st.session_state["latest_mp4_run_url"])
-else:
-    st.caption("Direct MP4 retrieval from this page requires optional GITHUB_TOKEN authorization. Without it, open the Actions run and download the artifact there.")
+if st.button("Check latest completed MP4", use_container_width=True):
+    try:
+        with st.spinner("Checking GitHub Actions and retrieving the MP4…"):
+            video_bytes, completed_run = fetch_latest_mp4(token_for_download)
+        st.session_state["latest_mp4_bytes"] = video_bytes
+        st.session_state["latest_mp4_title"] = completed_run.get("display_title", "Weird History documentary")
+        st.session_state["latest_mp4_run_url"] = completed_run["html_url"]
+    except Exception as exc:
+        st.error(str(exc))
+if st.session_state.get("latest_mp4_bytes"):
+    st.success(f"Ready: {st.session_state.get('latest_mp4_title', 'Weird History documentary')}")
+    st.download_button("Download final MP4", st.session_state["latest_mp4_bytes"], file_name="weird_history_final.mp4", mime="video/mp4", use_container_width=True, key="download_latest_mp4")
+    st.link_button("View render logs", st.session_state["latest_mp4_run_url"])
+if not token_for_download:
+    st.caption("No AI API key is needed. Public artifact access will be tried; if GitHub restricts direct download, use the run page to download the artifact. Triggering a remote render directly from this app still needs optional GitHub authorization.")
