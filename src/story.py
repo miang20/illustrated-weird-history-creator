@@ -168,7 +168,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 f"Write a high-retention {target_minutes}-minute Weird History YouTube documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
-                f"Aim for about {target_minutes * WORDS_PER_MINUTE} words. Follow this story architecture without adding headings: "
+                f"STRICT LENGTH LIMIT: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE * 1.05)} words total, including all paragraphs. For a 5-minute video, write 450-525 words; never write 700+ words. Aim near {int(target_minutes * WORDS_PER_MINUTE)} words and stop after the payoff. Follow this story architecture without adding headings: "
                 "STORY BEATS, in this order and without headings: "
                 "(1) HOOK in paragraph 1: start inside the strangest documented moment or consequence, with a concrete detail and immediate stakes; no opening question, no 'Imagine', no greeting. "
                 "(2) STORY in paragraphs 2-3: begin the narrative, identify the time/place/people, and explain what was at stake in plain spoken English. "
@@ -189,7 +189,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     with torch.inference_mode():
         output = model.generate(
             **encoded,
-            max_new_tokens=target_minutes * 190,
+            max_new_tokens=target_minutes * 145,
             do_sample=True,
             temperature=0.62,
             top_p=0.88,
