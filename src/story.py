@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from urllib.parse import quote
@@ -49,6 +50,67 @@ def _sentences(text: str) -> list[str]:
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
+def _generate_local_script(title: str, extract: str, target_minutes: int, angle: str) -> list[str] | None:
+    """Use a small public local instruction model; never requires an inference API key."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+    torch.set_num_threads(min(4, os.cpu_count() or 4))
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id, torch_dtype=torch.float32, low_cpu_mem_usage=True
+    ).to("cpu")
+    model.eval()
+    prompt_messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a careful documentary writer. Write original, natural spoken English, not an encyclopedia article. "
+                "Do not invent dialogue, dates, motives, quotations, or events. Use only claims supported by the research notes. "
+                "Mark uncertainty honestly. Paraphrase the notes instead of copying their sentences. Avoid repeated filler and clichés. "
+                "No headings, bullet points, citations read aloud, or production directions. Output narration paragraphs only."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Write a compelling {target_minutes}-minute Weird History documentary narration about: {title}. "
+                f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
+                f"Aim for about {target_minutes * 132} words. Use a sharp but responsible opening hook, clear chronology, "
+                "specific verified details, competing interpretations where supported, and a memorable conclusion. "
+                "Use 10 to 16 short paragraphs with natural spoken transitions. Do not overstate the evidence.\n\n"
+                f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:10500]}"
+            ),
+        },
+    ]
+    prompt = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
+    encoded = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=6500)
+    with torch.inference_mode():
+        output = model.generate(
+            **encoded,
+            max_new_tokens=target_minutes * 210,
+            do_sample=True,
+            temperature=0.72,
+            top_p=0.9,
+            repetition_penalty=1.12,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+    generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+    del model, tokenizer
+    generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
+    if len(paragraphs) < 6:
+        sentences = _sentences(generated)
+        paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
+    words = sum(len(p.split()) for p in paragraphs)
+    target = target_minutes * 132
+    if len(paragraphs) < 6 or not int(target * 0.72) <= words <= int(target * 1.4):
+        print(f"Local script model output did not meet length/structure checks ({words} words); using structured fallback.")
+        return None
+    return paragraphs
+
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     research = research_topic(topic)
     sentences = _sentences(research.extract)
@@ -57,6 +119,21 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     target_words = target_minutes * 132
     selected = sentences[:min(len(sentences), max(8, target_minutes * 2 + 2))]
     title = research.title
+    try:
+        ai_paragraphs = _generate_local_script(title, research.extract, target_minutes, angle)
+        if ai_paragraphs:
+            return Story(
+                title=title,
+                paragraphs=ai_paragraphs,
+                sources=[{
+                    "title": research.title,
+                    "url": research.url,
+                    "note": "Source used as factual reference; narration generated locally and paraphrased.",
+                }],
+                word_count=sum(len(p.split()) for p in ai_paragraphs),
+            )
+    except Exception as exc:
+        print(f"Local script model unavailable; using structured no-key fallback: {type(exc).__name__}: {exc}")
     paragraphs = [
         f"Imagine discovering that one of the strangest stories in history was not a legend, but an event people tried to explain while it was happening. Today, we are looking at {title}. {selected[0]} "
         f"{'Our focus is ' + angle.strip() + '. ' if angle.strip() else ''}"
