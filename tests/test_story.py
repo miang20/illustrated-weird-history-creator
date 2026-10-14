@@ -33,6 +33,8 @@ def test_fallback_sentence_selection_uses_available_facts_without_repeating():
 
 def test_narration_word_target_uses_calibrated_kokoro_pace():
     assert WORDS_PER_MINUTE == 100
+    # The generation prompt targets the nominal word count; the gate allows modest model variance.
+    assert int(5 * WORDS_PER_MINUTE * 1.18) == 590
     assert 5 * WORDS_PER_MINUTE == 500
     assert 8 * WORDS_PER_MINUTE == 800
 
