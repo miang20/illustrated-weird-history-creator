@@ -44,6 +44,20 @@ def test_research_title_relevance_distinguishes_subjects():
     assert _title_relevance("The Great Molasses Flood of 1919", "A completely unrelated article") == 0.0
 
 
+def test_script_quality_gate_rejects_names_not_supported_by_research_source():
+    paragraphs = [
+        ("Halloween traditions evolved across communities over many generations. "
+         + "People adapted local customs and celebrations over time. " * 8)
+        for _ in range(8)
+    ]
+    paragraphs[2] += " A German immigrant named Carl Schenck documented the celebrations."
+    issues = _script_quality_issues(
+        "Halloween", paragraphs, target_minutes=5,
+        source_text="Halloween developed from older seasonal customs in Europe.",
+    )
+    assert any("multi-word names/places not found" in issue for issue in issues)
+
+
 def test_script_quality_gate_rejects_short_generic_script():
     issues = _script_quality_issues(
         "The Great Molasses Flood of 1919",
