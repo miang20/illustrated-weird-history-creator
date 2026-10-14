@@ -12,7 +12,7 @@ The app is in app.py. Deploy it to Streamlit Community Cloud by selecting this r
 ## Free-tier and compute notes
 - Wikipedia API and open model downloads require no AI provider key.
 - GitHub public standard runners have no GPU; SD-Turbo image generation is CPU-based and may be slow.
-- The workflow uploads MP4 plus notes for two days to limit artifact storage.
+- The workflow uploads MP4 plus notes for seven days to limit artifact storage.
 - A successful Python smoke test is not proof of natural voice quality or successful full rendering; the first full run is the integration test.
 
 The smoke-test workflow invokes pytest as a Python module so the repository root is importable in CI.
