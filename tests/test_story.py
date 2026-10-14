@@ -1,4 +1,4 @@
-from src.story import _sentences, _select_sentences_for_target, weekly_topic, WEEKLY_TOPICS
+from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, weekly_topic, WEEKLY_TOPICS
 
 def test_sentence_splitter_returns_distinct_facts():
     result = _sentences("The event began in 1518. It affected several people in the city. Historians still debate the causes of the event.")
@@ -29,3 +29,9 @@ def test_fallback_sentence_selection_uses_available_facts_without_repeating():
     sentences = ["The event began in 1518.", "Several people recorded what happened next."]
     selected = _select_sentences_for_target(sentences, target_words=660)
     assert selected == sentences
+
+
+def test_narration_word_target_uses_calibrated_kokoro_pace():
+    assert WORDS_PER_MINUTE == 100
+    assert 5 * WORDS_PER_MINUTE == 500
+    assert 8 * WORDS_PER_MINUTE == 800
