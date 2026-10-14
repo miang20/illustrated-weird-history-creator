@@ -34,7 +34,7 @@ WEEKLY_TOPICS = [
     "The Mary Celeste mystery",
     "The Year Without a Summer",
     "The Great Emu War",
-    "The Boston Molasses Disaster",
+    "The London Necropolis Railway",
     "The Defenestrations of Prague",
     "The Tunguska event",
     "The Great Stink of London",
