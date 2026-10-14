@@ -67,7 +67,7 @@ def fetch_latest_mp4(token: str):
     runs_response.raise_for_status()
     runs = runs_response.json().get("workflow_runs", [])
     successful = [run for run in runs if run.get("path") == ".github/workflows/build.yml"
-                  and run.get("event") == "workflow_dispatch" and run.get("status") == "completed"
+                  and run.get("event") in ("workflow_dispatch", "schedule") and run.get("status") == "completed"
                   and run.get("conclusion") == "success"]
     if not successful:
         raise RuntimeError("No successful manual render was found on main yet.")
