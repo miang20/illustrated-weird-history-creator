@@ -21,8 +21,25 @@ with st.sidebar:
     resolution = st.selectbox("Export resolution", ["1280 × 720 (recommended for free CPU)", "1920 × 1080 (slower)"])
     st.caption("16:9 landscape, 30 fps, H.264/AAC.")
 
-topic = st.text_input("Documentary topic", placeholder="Example: The dancing plague of 1518")
-angle = st.text_area("Optional editorial angle", placeholder="Focus on strange theories and what historians actually know.", height=90)
+topic_choices = [
+    "The Great Molasses Flood of 1919",
+    "The Great Emu War",
+    "The Cadaver Synod",
+    "The London Beer Flood of 1814",
+    "The dancing plague of 1518",
+    "The Mary Celeste mystery",
+    "The Year Without a Summer",
+    "The Tunguska event",
+    "Custom topic",
+]
+topic_choice = st.selectbox("Choose a high-curiosity topic", topic_choices, index=0)
+custom_topic = st.text_input("Or enter your own topic", placeholder="Type a custom historical topic (optional)")
+topic = custom_topic.strip() or ("" if topic_choice == "Custom topic" else topic_choice)
+angle = st.text_area(
+    "Story angle / opening direction",
+    value="Open with the most surprising documented moment. Explain what caused it, the human consequences, and what happened afterward. No slow encyclopedia-style introduction.",
+    height=90,
+)
 generate = st.button("Generate final MP4", type="primary", use_container_width=True)
 
 def dispatch(topic_value: str, duration: int, scenes: int, voice_name: str, output_size: str, angle_value: str) -> tuple[bool, str]:
