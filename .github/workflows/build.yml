@@ -78,12 +78,12 @@ jobs:
           pip install -r requirements-render.txt
       - name: Render complete documentary
         env:
-          TOPIC: ${{ inputs.topic || '' }}
-          DURATION: ${{ inputs.duration || '6' }}
-          SCENES: ${{ inputs.scenes || '12' }}
-          VOICE: ${{ inputs.voice || 'af_heart' }}
-          RESOLUTION: ${{ inputs.resolution || '1280x720' }}
-          ANGLE: ${{ inputs.angle || '' }}
+          TOPIC: ${{ github.event.inputs.topic || '' }}
+          DURATION: ${{ github.event.inputs.duration || '6' }}
+          SCENES: ${{ github.event.inputs.scenes || '12' }}
+          VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
+          RESOLUTION: ${{ github.event.inputs.resolution || '1280x720' }}
+          ANGLE: ${{ github.event.inputs.angle || '' }}
         run: |
           python - <<'PY'
           import os
