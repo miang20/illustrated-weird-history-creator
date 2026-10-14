@@ -135,9 +135,22 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         "-filter_complex","[2:a]volume=0.13[bg];[1:a][bg]amix=inputs=2:duration=first:weights='1 0.12',loudnorm=I=-16:TP=-1.5:LRA=11[a]",
         "-vf",vf,"-map","0:v:0","-map","[a]","-c:v","libx264","-preset","veryfast","-crf","21",
         "-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",str(final_path)])
-    probe = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration,size","-of","json",str(final_path)],
+    probe = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration,size:stream=codec_type,codec_name,width,height","-of","json",str(final_path)],
                            check=True,text=True,stdout=subprocess.PIPE)
-    media = json.loads(probe.stdout)["format"]
+    probe_data = json.loads(probe.stdout)
+    media = probe_data["format"]
+    streams = probe_data.get("streams", [])
+    video_stream = next((stream for stream in streams if stream.get("codec_type") == "video"), None)
+    audio_stream = next((stream for stream in streams if stream.get("codec_type") == "audio"), None)
+    expected_width, expected_height = (1920, 1080) if resolution == "1920x1080" else (1280, 720)
+    if video_stream is None:
+        raise RuntimeError("Final MP4 contains no video stream.")
+    if audio_stream is None:
+        raise RuntimeError("Final MP4 contains no audio stream.")
+    if (int(video_stream.get("width", 0)), int(video_stream.get("height", 0))) != (expected_width, expected_height):
+        raise RuntimeError(f"Final MP4 dimensions are {video_stream.get('width')}x{video_stream.get('height')}; expected {expected_width}x{expected_height}.")
+    if video_stream.get("codec_name") != "h264":
+        raise RuntimeError(f"Final MP4 video codec is {video_stream.get('codec_name')}; expected H.264.")
     video_seconds = float(media["duration"])
     if video_seconds < duration_minutes*60*0.82:
         raise RuntimeError(f"Final MP4 is too short ({video_seconds/60:.1f} minutes).")
@@ -145,6 +158,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         raise RuntimeError(f"Final MP4 is too long ({video_seconds/60:.1f} minutes).")
     report = {"title":story.title,"topic":topic,"video":str(final_path),"duration_seconds":round(video_seconds,2),
         "word_count":story.word_count,"voice_engine":voice_engine,"scene_count":len(images),"resolution":resolution,
-        "size_bytes":int(media["size"]),"sources":story.sources}
+        "size_bytes":int(media["size"]),"video_codec":video_stream.get("codec_name"),
+        "audio_codec":audio_stream.get("codec_name"),"sources":story.sources}
     (job_dir/"render_report.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
     return {"video":final_path,"report":report,"directory":job_dir}
