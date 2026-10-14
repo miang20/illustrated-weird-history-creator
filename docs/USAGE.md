@@ -1,6 +1,7 @@
 # Usage and deployment
 
 ## Generate a video
+A scheduled workflow runs every Sunday and rotates through a curated list of researchable Weird History topics. No AI-provider key is required.
 - Open the repository Actions tab.
 - Choose Build Weird History Video and press Run workflow.
 - Enter the topic, select 5–8 minutes, choose a Kokoro narrator, and start the run.
