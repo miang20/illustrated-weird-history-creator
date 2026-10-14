@@ -1,13 +1,15 @@
 name: Build Weird History Video
 
 on:
+  schedule:
+    - cron: "0 7 * * 0"
   workflow_dispatch:
     inputs:
       topic:
         description: Historical topic for the documentary
-        required: true
+        required: false
         type: string
-        default: The dancing plague of 1518
+        default: ""
       duration:
         description: Narration duration in minutes (5 to 8)
         required: true
@@ -74,7 +76,7 @@ jobs:
           pip install -r requirements-render.txt
       - name: Render complete documentary
         env:
-          TOPIC: ${{ inputs.topic || 'The dancing plague of 1518' }}
+          TOPIC: ${{ inputs.topic || '' }}
           DURATION: ${{ inputs.duration || '6' }}
           SCENES: ${{ inputs.scenes || '12' }}
           VOICE: ${{ inputs.voice || 'af_heart' }}
@@ -88,8 +90,13 @@ jobs:
           duration = int(os.environ["DURATION"])
           if duration < 5 or duration > 8:
               raise SystemExit("Duration must be between 5 and 8 minutes.")
+          topic = os.environ.get("TOPIC", "").strip()
+          if not topic:
+              from src.story import weekly_topic
+              topic = weekly_topic()
+          print(f"Selected documentary topic: {topic}")
           result = render_documentary(
-              topic=os.environ["TOPIC"],
+              topic=topic,
               duration_minutes=duration,
               scene_count=int(os.environ["SCENES"]),
               voice=os.environ["VOICE"],
