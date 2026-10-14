@@ -139,7 +139,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    model_id = "Qwen/Qwen2.5-0.5B-Instruct"
+    model_id = "Qwen/Qwen2.5-1.5B-Instruct"
     torch.set_num_threads(min(4, os.cpu_count() or 4))
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
@@ -185,10 +185,10 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     with torch.inference_mode():
         output = model.generate(
             **encoded,
-            max_new_tokens=target_minutes * 210,
+            max_new_tokens=target_minutes * 190,
             do_sample=True,
-            temperature=0.72,
-            top_p=0.9,
+            temperature=0.62,
+            top_p=0.88,
             repetition_penalty=1.12,
             pad_token_id=tokenizer.eos_token_id,
             eos_token_id=tokenizer.eos_token_id,
@@ -200,12 +200,44 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     if len(paragraphs) < 6:
         sentences = _sentences(generated)
         paragraphs = [" ".join(sentences[i:i+3]) for i in range(0, len(sentences), 3) if sentences[i:i+3]]
-    words = sum(len(p.split()) for p in paragraphs)
-    target = target_minutes * WORDS_PER_MINUTE
-    if len(paragraphs) < 6 or not int(target * 0.95) <= words <= int(target * 1.12):
-        print(f"Local script model output did not meet length/structure checks ({words} words); using structured fallback.")
+    issues = _script_quality_issues(title, paragraphs, target_minutes)
+    if issues:
+        print("Script quality gate rejected narration: " + "; ".join(issues))
         return None
     return paragraphs
+
+
+def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: int) -> list[str]:
+    """Reject scripts that are too short, repetitive, generic, or disconnected from the subject."""
+    text = "\\n".join(paragraphs).strip()
+    words = re.findall(r"[a-z0-9']+", text.lower())
+    target = target_minutes * WORDS_PER_MINUTE
+    issues: list[str] = []
+    if len(paragraphs) < 8:
+        issues.append(f"only {len(paragraphs)} narration paragraphs; need at least 8")
+    if not int(target * 0.90) <= len(words) <= int(target * 1.12):
+        issues.append(f"{len(words)} words is outside the target range {int(target * 0.90)}-{int(target * 1.12)}")
+    terms = _topic_terms(title)
+    word_set = set(words)
+    if terms and len(terms & word_set) < max(1, (len(terms) + 1) // 2):
+        issues.append("the narration does not clearly stay anchored to the requested historical subject")
+    normalized_sentences = [re.sub(r"[^a-z0-9 ]", "", s.lower()).strip() for s in _sentences(text)]
+    normalized_sentences = [s for s in normalized_sentences if len(s.split()) >= 8]
+    if len(normalized_sentences) != len(set(normalized_sentences)):
+        issues.append("the narration repeats one or more sentences")
+    lower_text = text.lower()
+    filler_phrases = (
+        "the surrounding context matters here", "this is where things get interesting",
+        "but here's the twist", "as we can see", "in conclusion",
+        "this teaches us an important lesson", "the story doesn't end there",
+    )
+    found_filler = [phrase for phrase in filler_phrases if lower_text.count(phrase) > 0]
+    if found_filler:
+        issues.append("generic filler detected: " + ", ".join(found_filler))
+    first = paragraphs[0].strip().lower() if paragraphs else ""
+    if first.startswith(("imagine ", "have you ever wondered", "what if ", "did you know")):
+        issues.append("the opening hook is generic rather than a concrete documented moment")
+    return issues
 
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     research = research_topic(topic)
