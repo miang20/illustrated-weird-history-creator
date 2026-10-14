@@ -97,9 +97,9 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         {
             "role": "user",
             "content": (
-                f"Write a compelling {target_minutes}-minute Weird History documentary narration about: {title}. "
+                f"Write a high-retention {target_minutes}-minute Weird History documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
-                f"Aim for about {target_minutes * 132} words. Use a sharp but responsible opening hook, clear chronology, "
+                f"Aim for about {target_minutes * 132} words. Open immediately with the most surprising specific verified fact, not a question, not 'Imagine', and not 'Today we are looking at'. The first two sentences must create curiosity without exaggeration. Use short, spoken-English sentences, clear chronology, "
                 "specific verified details, competing interpretations where supported, and a memorable conclusion. "
                 "Use 10 to 16 short paragraphs with natural spoken transitions. Do not overstate the evidence.\n\n"
                 f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:10500]}"
@@ -139,7 +139,7 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     if len(sentences) < 6:
         raise ValueError("Research source did not contain enough distinct facts to build a documentary.")
     target_words = target_minutes * 132
-    selected = sentences[:min(len(sentences), max(8, target_minutes * 2 + 2))]
+    selected = sentences[:min(len(sentences), max(16, target_minutes * 6))]
     title = research.title
     try:
         ai_paragraphs = _generate_local_script(title, research.extract, target_minutes, angle)
@@ -156,45 +156,32 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
             )
     except Exception as exc:
         print(f"Local script model unavailable; using structured no-key fallback: {type(exc).__name__}: {exc}")
+    # High-quality deterministic fallback: use distinct source facts in sequence instead of padding with repeated filler.
+    opening = selected[0]
     paragraphs = [
-        f"Imagine discovering that one of the strangest stories in history was not a legend, but an event people tried to explain while it was happening. Today, we are looking at {title}. {selected[0]} "
-        f"{'Our focus is ' + angle.strip() + '. ' if angle.strip() else ''}"
-        "The challenge is to separate what the record actually tells us from the explanations added later."
+        f"{opening} This is the documented starting point of {title}. The story becomes more revealing when we follow what happened next and separate contemporary evidence from later interpretation."
     ]
     transitions = [
-        "To understand why this mattered, we have to look at the world around the event.",
-        "That detail changes the way the story looks. People were reacting with the knowledge and fears available to them at the time.",
-        "Here is where the timeline becomes important. Small details can become remarkable when placed beside other evidence.",
-        "The next part is less about a single dramatic moment and more about how the event unfolded.",
-        "But the historical record has limits. Some details are documented, while other parts remain uncertain or disputed.",
-        "That uncertainty is a reminder that historians work with surviving evidence, not a perfect recording of the past.",
-        "As more details are placed together, the story becomes stranger and more understandable at the same time.",
-        "The aftermath matters because it shows what people remembered and what later generations chose to emphasize.",
+        "The surrounding context matters here.",
+        "The next documented detail adds another piece to the timeline.",
+        "This is where the surviving evidence becomes especially useful.",
+        "It is worth separating what the sources record from what later retellings suggest.",
+        "Seen in context, this detail helps explain why the event mattered.",
     ]
     for i, fact in enumerate(selected[1:]):
-        paragraphs.append(f"{transitions[i % len(transitions)]} {fact}")
+        prefix = transitions[(i // 2) % len(transitions)] + " " if i % 2 == 0 else ""
+        paragraphs.append((prefix + fact).strip())
     paragraphs.append(
-        f"So what should we take away from {title}? Keep documented facts separate from speculation. "
-        "History can be astonishing without adding imaginary dialogue, invented motives, or details that sources cannot support. "
-        "The mystery is often that people had to make decisions with incomplete information. And that is why this story still deserves a closer look."
+        f"The lasting question about {title} is what the evidence can genuinely tell us. "
+        "Some details are documented; others remain uncertain or disputed. "
+        "That distinction does not make the story less extraordinary. It makes the real history more interesting than an embellished version."
     )
-    expansions = [
-        "Think of this as a sequence of clues rather than a finished explanation. Each clue adds context, but none proves more than it can establish.",
-        "When a story survives for generations, retelling can become more dramatic than the evidence. A careful account lets verified details do the work.",
-        "The useful question is not only what happened, but how people involved understood what they were seeing. Their assumptions shaped their reactions.",
-        "Dates, places, and contemporary accounts help separate the event from myths and interpretations that grew afterward.",
-    ]
-    cursor = 0
-    while sum(len(p.split()) for p in paragraphs) < int(target_words * 1.05) and cursor < 16:
-        fact = selected[(cursor + 1) % len(selected)]
-        paragraphs.insert(max(1, len(paragraphs)-1), f"{expansions[cursor % len(expansions)]} {fact}")
-        cursor += 1
     normalized = []
     for paragraph in paragraphs:
-        if len(paragraph.split()) > 115:
+        if len(paragraph.split()) > 85:
             bucket = ""
-            for bit in re.split(r"(?<=[.!?])\s+", paragraph):
-                if len((bucket + " " + bit).split()) > 85 and bucket:
+            for bit in re.split(r"(?<=[.!?])\\s+", paragraph):
+                if len((bucket + " " + bit).split()) > 65 and bucket:
                     normalized.append(bucket.strip())
                     bucket = bit
                 else:
