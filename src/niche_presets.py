@@ -40,6 +40,9 @@ def _validate_preset(name: str, data: Any) -> dict[str, Any]:
         raise ValueError(f"Niche preset '{name}' field 'fixed_seed' must be an integer.")
     if not isinstance(data["default_voice"], str) or data["default_voice"] not in SUPPORTED_VOICES:
         raise ValueError(f"Niche preset '{name}' field 'default_voice' must be one of: {', '.join(sorted(SUPPORTED_VOICES))}.")
+    data.setdefault("postprocess", False)
+    if not isinstance(data["postprocess"], bool):
+        raise ValueError(f"Niche preset '{name}' field 'postprocess' must be true or false.")
     caption = data["caption_style"]
     if not isinstance(caption, dict):
         raise ValueError(f"Niche preset '{name}' field 'caption_style' must be a JSON object.")
