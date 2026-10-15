@@ -64,8 +64,8 @@ def script_length_report(word_count: int, target_minutes: int, words_per_minute:
     """Estimate narration length and flag a likely mismatch before expensive rendering."""
     estimated_minutes = word_count / words_per_minute if words_per_minute else 0.0
     target_words = target_minutes * words_per_minute
-    lower = int(target_words * 0.82)
-    upper = int(target_words * 1.15)
+    lower = int(target_words * 0.90)
+    upper = int(target_words * 1.12)
     return {
         "estimated_minutes": round(estimated_minutes, 2),
         "minimum_words": lower,
