@@ -34,7 +34,7 @@ with st.sidebar:
     )
     st.caption("16:9 landscape, 30 fps, H.264/AAC. Default is 5 minutes, 30 scenes, 1080p.")
 
-project_title = st.text_input("Video title / project name", value="Halloween: The Dark, Weird History")
+project_title = st.text_input("Video title / project name", value="My Stickman Documentary")
 manual_script = st.text_area(
     "MANUAL SCRIPT — paste your complete narration",
     height=360,
