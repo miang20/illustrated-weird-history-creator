@@ -1,0 +1,29 @@
+{
+  "display_name": "Psychology & Human Behavior",
+  "style_prefix": "Popular YouTube-style simple 2D stickman psychology explainer illustration; clean black outlines, round heads, thin line limbs, flat graphic shapes, clear readable emotional gestures and simple visual metaphors; no photorealism, no 3D, no live action.",
+  "character_look": "The same main psychology stickman in every scene: a pale cream round head with two dot eyes, a small expressive black mouth, thin black line arms and legs, a consistent teal-blue shirt shape and charcoal trousers, and simple stable proportions; flat 2D ink outline, no realistic anatomy.",
+  "color_palette": "Teal, soft cream, deep navy, muted coral, and warm gray; use one accent color for the central idea.",
+  "environment_hints": "Use simple everyday settings such as a room, workplace, social group, mirror, phone, or abstract thought bubbles and branching choices; represent concepts with clear simple symbols, never with readable text.",
+  "action_directions": [
+    "the main stickman hesitates between two clear paths",
+    "the main stickman crosses arms defensively during a social interaction",
+    "the main stickman looks into a mirror with a conflicted posture",
+    "two stickmen display contrasting body language in the same situation",
+    "the main stickman notices a simple visual pattern or repeated cue",
+    "the main stickman steps back from a crowd and pauses to think",
+    "the main stickman points at a simple cause-and-effect chain of icons",
+    "the main stickman reacts with surprise after recognizing a bias",
+    "the main stickman calmly sets a boundary with an open-palm gesture"
+  ],
+  "negative_prompt": "photograph, photorealism, realistic people, 3D, CGI, medical imagery, brain gore, complex infographic text, readable letters, captions, logo, watermark, glowing eyes, superhero pose, duplicate main character, extra limbs, cluttered symbols, blurry subject",
+  "fixed_seed": 390127,
+  "caption_style": {
+    "font_size": 22,
+    "text_color": "#FFFFFF",
+    "outline_color": "#071C26",
+    "position": "bottom_center",
+    "outline_width": 3,
+    "margin_v": 46
+  },
+  "default_voice": "af_heart"
+}

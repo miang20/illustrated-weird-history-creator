@@ -14,6 +14,7 @@ from src.story import WORDS_PER_MINUTE
 from src.manual_script import build_manual_story
 from src.voice import audio_duration, concatenate_audio, synthesize_paragraphs
 from src.visuals import generate_scenes
+from src.niche_presets import DEFAULT_NICHE, load_niche_preset
 
 def _run(command: list[str], timeout: int = 7200) -> None:
     result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
@@ -77,10 +78,13 @@ def _render_scene(image: Path, duration: float, destination: Path, resolution: s
          timeout=max(300,int(duration*15)))
 
 def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int = 12,
-                       voice: str = "af_heart", resolution: str = "1280x720",
-                       angle: str = "", output_dir: Path | str = Path("output"), manual_script: str = "") -> dict:
+                       voice: str | None = None, resolution: str = "1280x720",
+                       angle: str = "", output_dir: Path | str = Path("output"), manual_script: str = "",
+                       niche: str = DEFAULT_NICHE) -> dict:
     if not 5 <= int(duration_minutes) <= 8:
         raise ValueError("Duration must be between 5 and 8 minutes.")
+    preset = load_niche_preset(niche)
+    selected_voice = preset["default_voice"] if not voice or voice == "preset_default" else voice
     # Validate the supplied script before touching any previous output or starting expensive models.
     story = build_manual_story(topic, manual_script)
     minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
@@ -101,8 +105,8 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     (job_dir/"script.txt").write_text("\n\n".join(story.paragraphs),encoding="utf-8")
     (job_dir/"sources.json").write_text(json.dumps(story.sources,indent=2),encoding="utf-8")
     (job_dir/"metadata.json").write_text(json.dumps({"topic":topic,"title":story.title,"target_minutes":duration_minutes,
-        "word_count":story.word_count,"resolution":resolution,"manual_script":bool(manual_script.strip())},indent=2),encoding="utf-8")
-    audio_paths, voice_engine = synthesize_paragraphs(story.paragraphs,job_dir/"audio",voice)
+        "word_count":story.word_count,"resolution":resolution,"manual_script":bool(manual_script.strip()),"niche":niche},indent=2),encoding="utf-8")
+    audio_paths, voice_engine = synthesize_paragraphs(story.paragraphs,job_dir/"audio",selected_voice)
     durations = [audio_duration(p) for p in audio_paths]
     narration = job_dir/"narration.wav"
     concatenate_audio(audio_paths,narration)
@@ -111,7 +115,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         raise RuntimeError(f"Narration is only {voice_seconds/60:.1f} minutes; target is {duration_minutes}. Refusing to create a falsely labelled short video.")
     if voice_seconds > duration_minutes*60*1.15:
         raise RuntimeError(f"Narration is {voice_seconds/60:.1f} minutes, too long for the selected {duration_minutes}-minute target.")
-    images = generate_scenes(topic,story.paragraphs,job_dir/"scenes",scene_count)
+    images = generate_scenes(topic,story.paragraphs,job_dir/"scenes",scene_count,niche=niche)
     total_seconds = voice_seconds
     # Fast visual rhythm: a new 5.5-second shot with a different crop/motion, rather than one still lasting ~25 seconds.
     shot_seconds = 5.5
@@ -134,7 +138,20 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     final_path = job_dir/"final_weird_history.mp4"
     subtitle_path = captions.as_posix().replace(":","\\:").replace("'","\\'")
     width,height = (1920,1080) if resolution == "1920x1080" else (1280,720)
-    vf = f"subtitles='{subtitle_path}':force_style='FontName=DejaVu Sans,FontSize=22,Outline=2,Shadow=1,Alignment=2,MarginV=46',scale={width}:{height},setsar=1"
+    caption = preset["caption_style"]
+    def ass_color(hex_color: str) -> str:
+        rgb = hex_color.lstrip("#")
+        return f"&H00{rgb[4:6]}{rgb[2:4]}{rgb[0:2]}"
+    alignment = {
+        "bottom_left": 1, "bottom_center": 2, "bottom_right": 3,
+        "middle_center": 5, "top_left": 7, "top_center": 8, "top_right": 9,
+    }[caption["position"]]
+    vf = (
+        f"subtitles='{subtitle_path}':force_style='FontName=DejaVu Sans,FontSize={caption['font_size']},"
+        f"PrimaryColour={ass_color(caption['text_color'])},OutlineColour={ass_color(caption['outline_color'])},"
+        f"Outline={caption['outline_width']},Shadow=1,Alignment={alignment},MarginV={caption['margin_v']}',"
+        f"scale={width}:{height},setsar=1"
+    )
     _run(["ffmpeg","-y","-hide_banner","-loglevel","error","-i",str(visuals),"-i",str(narration),"-i",str(bed),
         "-filter_complex","[2:a]volume=0.13[bg];[1:a][bg]amix=inputs=2:duration=first:weights='1 0.12',loudnorm=I=-16:TP=-1.5:LRA=11[a]",
         "-vf",vf,"-map","0:v:0","-map","[a]","-c:v","libx264","-preset","veryfast","-crf","21",
@@ -161,7 +178,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     if video_seconds > duration_minutes*60*1.15:
         raise RuntimeError(f"Final MP4 is too long ({video_seconds/60:.1f} minutes).")
     report = {"title":story.title,"topic":topic,"video":str(final_path),"duration_seconds":round(video_seconds,2),
-        "word_count":story.word_count,"voice_engine":voice_engine,"scene_count":len(images),"resolution":resolution,
+        "word_count":story.word_count,"voice_engine":voice_engine,"voice":selected_voice,"niche":niche,"scene_count":len(images),"resolution":resolution,
         "size_bytes":int(media["size"]),"video_codec":video_stream.get("codec_name"),
         "audio_codec":audio_stream.get("codec_name"),"sources":story.sources}
     (job_dir/"render_report.json").write_text(json.dumps(report,indent=2),encoding="utf-8")

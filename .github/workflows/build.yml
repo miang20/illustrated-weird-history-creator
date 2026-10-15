@@ -3,6 +3,12 @@ name: Render Manual Stickman Documentary
 on:
   workflow_dispatch:
     inputs:
+      niche:
+        description: Visual and caption preset
+        required: true
+        type: choice
+        options: [stickman_history, survival, psychology, science, dark_mysteries]
+        default: stickman_history
       title:
         description: Video title / output name
         required: true
@@ -25,11 +31,11 @@ on:
         options: ["18", "24", "30", "36"]
         default: "30"
       voice:
-        description: Neural narrator voice
+        description: Narrator voice override (or use the selected niche preset default)
         required: true
         type: choice
-        options: [af_heart, am_michael]
-        default: af_heart
+        options: [preset_default, af_heart, am_michael]
+        default: preset_default
       resolution:
         description: Landscape export size
         required: true
@@ -67,9 +73,10 @@ jobs:
           pip install -r requirements-render.txt
       - name: Preflight renderer imports and export settings
         env:
+          NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           DURATION: ${{ github.event.inputs.duration || '5' }}
           SCENES: ${{ github.event.inputs.scenes || '30' }}
-          VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
+          VOICE: ${{ github.event.inputs.voice || 'preset_default' }}
           RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
         run: |
           python -m compileall -q app.py src
@@ -78,10 +85,14 @@ jobs:
           import numpy, soundfile, torch, diffusers, transformers
           from kokoro import KPipeline
           from src.manual_script import build_manual_story
+          from src.niche_presets import load_niche_preset
           from src.render import render_documentary
+          niche = os.environ["NICHE"]
+          preset = load_niche_preset(niche)
           duration = int(os.environ["DURATION"])
           scenes = int(os.environ["SCENES"])
-          voice = os.environ["VOICE"]
+          voice_input = os.environ["VOICE"]
+          voice = preset["default_voice"] if voice_input == "preset_default" else voice_input
           resolution = os.environ["RESOLUTION"]
           if duration not in (5, 6, 7, 8):
               raise SystemExit("Unsupported narration duration.")
@@ -94,12 +105,13 @@ jobs:
           sample = build_manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
           if sample.word_count < 250 or any("SCENE 1" in p for p in sample.paragraphs):
               raise SystemExit("Manual-script parser preflight failed.")
-          print(f"Preflight passed: manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
+          print(f"Preflight passed: niche={niche}, manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
           PY
       - name: Render the supplied manual script
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           DURATION: ${{ github.event.inputs.duration }}
           SCENES: ${{ github.event.inputs.scenes }}
           VOICE: ${{ github.event.inputs.voice }}
@@ -125,6 +137,7 @@ jobs:
               resolution=os.environ["RESOLUTION"],
               output_dir=Path("output"),
               manual_script=script,
+              niche=os.environ.get("NICHE", "stickman_history"),
           )
           print(result["report"])
           PY

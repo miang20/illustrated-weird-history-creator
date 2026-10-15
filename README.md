@@ -31,3 +31,9 @@ Deploy `app.py` from this repository. To let the hosted app trigger GitHub Actio
 - Public model downloads and Wikipedia may require internet access.
 - GitHub standard runners are CPU-only; the first image-model download and 30-scene render can take a long time.
 - A successful smoke test is not proof of natural voice quality or a successful full render. Full render remains the integration test.
+
+## Niche presets
+
+Choose a niche preset in the Streamlit sidebar or the manual GitHub Actions workflow: **Stickman History (default)**, Survival, Psychology, Science, or Dark Mysteries. The default preset keeps the existing simple 2D stickman/caveman-history direction and uses `af_heart` by default. Your pasted narration is not rewritten by a preset; presets only guide scene prompts, palette, caption appearance, and default voice.
+
+To add a niche, copy one JSON file from `config/niches/`, give it a new filename such as `space.json`, and edit the same fields. Keep `style_prefix` explicitly simple 2D stickman (not photorealistic or 3D), keep 8–10 `action_directions`, and use `af_heart` or `am_michael` for `default_voice`. Add the new preset name to the choices in both GitHub workflow files. The image model is unchanged and runs locally; no paid API is introduced.
