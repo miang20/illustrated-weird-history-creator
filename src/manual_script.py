@@ -26,7 +26,7 @@ def read_manual_script(script_file: str, fallback_script: str, repo_root: str | 
 
 def build_manual_story(title: str, script: str, enforce_minimum: bool = True) -> ManualStory:
     """Parse user-written narration without rewriting, summarizing, or adding claims."""
-    if not script or len(script.strip()) < 250:
+    if not script or (enforce_minimum and len(script.strip()) < 250):
         raise ValueError("Manual script is empty or too short. Paste the complete narration first.")
 
     kept_lines: list[str] = []
