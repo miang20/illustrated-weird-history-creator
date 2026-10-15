@@ -23,3 +23,17 @@ The art direction uses simple 2D YouTube-style stickman/caveman characters with 
 - The local open image model downloads weights and runs on CPU on standard GitHub runners, so first render can be slow.
 - To trigger the workflow directly from a hosted Streamlit app, configure a narrowly scoped GitHub token with Actions: write access as the Streamlit secret `GITHUB_TOKEN`. Never commit a token.
 - CI smoke tests do not prove successful full rendering or voice quality; a full render is the integration test.
+
+## Pick a niche preset
+
+In the Streamlit sidebar, choose **Niche preset** before pasting/rendering. The default is **Stickman History (Default)**, which keeps the current stickman history look. Survival, Psychology, Science, and Dark Mysteries use their own character description, action list, environment hints, colors, caption settings, and default voice. The same manual narration is passed through regardless of the selected niche; a preset never rewrites or adds narration.
+
+The GitHub Actions **Preview Manual Script** and **Render Manual Stickman Documentary** workflows also have a niche input. Preview records the selected preset in `report.json`; render applies it to scene prompts and caption styling.
+
+## Add another niche
+
+1. Copy a file from `config/niches/` and rename it, for example `space.json`.
+2. Edit the style prefix, fixed main-character description, palette, environment hints, 8–10 action directions, negative prompt, integer seed, caption style, and default voice.
+3. Keep the art direction simple 2D stickman, explicitly not photorealistic and not 3D. Use `af_heart` or `am_michael` as the default voice.
+4. Add `space` to the niche choice list in both `.github/workflows/build.yml` and `.github/workflows/script-preview.yml`.
+5. Run lightweight CI/tests before any full render. No paid API or new image model is required.
