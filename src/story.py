@@ -317,6 +317,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     words = re.findall(r"[a-z0-9']+", text.lower())
     target = target_minutes * WORDS_PER_MINUTE
     issues: list[str] = []
+    source_lower = re.sub(r"\s+", " ", source_text).casefold() if source_text else ""
     if len(paragraphs) < 8:
         issues.append(f"only {len(paragraphs)} narration paragraphs; need at least 8")
     if not int(target * 0.90) <= len(words) <= int(target * 1.12):
