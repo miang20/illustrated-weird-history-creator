@@ -1,6 +1,11 @@
 name: Build Weird History Video
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/story.py'
+      - '.github/workflows/build.yml'
   schedule:
     - cron: "0 7 * * 0"
   workflow_dispatch:
