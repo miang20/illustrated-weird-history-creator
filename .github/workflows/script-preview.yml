@@ -33,9 +33,9 @@ jobs:
           python-version: "3.11"
       - name: Parse and validate the manual narration
         env:
-          TITLE: \${{ github.event.inputs.title }}
-          MANUAL_SCRIPT: \${{ github.event.inputs.script }}
-          DURATION: \${{ github.event.inputs.duration }}
+          TITLE: ${{ github.event.inputs.title }}
+          MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          DURATION: ${{ github.event.inputs.duration }}
         run: |
           python - <<'PY'
           import json, os, re
