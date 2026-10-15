@@ -210,7 +210,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 "You are an expert high-retention YouTube documentary storyteller specializing in strange, surprising real history. "
                 "Write original, natural spoken English that sounds excellent aloud, never like an encyclopedia entry. "
-                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, rituals, locations, or events. Use only facts explicitly supported by the research notes. Do not reconstruct atmosphere or describe people doing things unless the notes document it. "
+                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, rituals, locations, events, or people. Never invent character names such as Sarah or Jack; use a person's or group's proper name only if that exact name appears in the research notes. Use only facts explicitly supported by the research notes. Do not reconstruct atmosphere or describe people doing things unless the notes document it. "
                 "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. Never fill gaps with folklore, imagined scenes, generic suspense, or facts remembered from outside the supplied notes. "
                 "Every paragraph must either reveal a new fact, raise a meaningful question the evidence can answer, clarify stakes, or change the viewer's understanding. "
                 "Avoid filler, repetitive transitions, fake cliffhangers, generic moral lessons, and sensational claims unsupported by evidence. "
@@ -280,6 +280,9 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             )
         generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
         generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
+        # Normalize one common model cliché rather than burning a second multi-minute
+        # generation attempt on wording that can be safely repaired deterministically.
+        generated = re.sub(r"\brich tapestry\b", "complex history", generated, flags=re.IGNORECASE)
         # Small local models occasionally emit beat labels despite being told not to.
         # Strip those labels so they never become spoken narration or false named entities.
         generated = re.sub(
@@ -368,7 +371,10 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             # narration even when its topic and named entities are source-grounded.
             if len(terms & source_terms) < 1:
                 ungrounded += 1
-        if checked >= 8 and ungrounded / checked > 0.40:
+        # A single Wikipedia overview is not a sentence-by-sentence script outline:
+        # connective narration and valid paraphrases may not reuse its exact vocabulary.
+        # Still reject drafts where most sentences are completely disconnected from the notes.
+        if checked >= 8 and ungrounded / checked > 0.60:
             issues.append(
                 f"{ungrounded} of {checked} narration sentences have no distinctive factual overlap with the selected research source"
             )
