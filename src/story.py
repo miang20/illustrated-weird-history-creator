@@ -332,6 +332,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     # Reject drafts dominated by claims with almost no lexical connection to the research.
     # This catches invented atmosphere and generic narration while allowing paraphrases.
     if source_text:
+        source_lower = source_text.lower()
         stopwords = {
             "about", "after", "again", "also", "although", "always", "among", "and", "any",
             "are", "around", "because", "been", "before", "being", "between", "both", "but",
