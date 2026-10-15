@@ -10,7 +10,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from src.story import WORDS_PER_MINUTE, build_story
+from src.story import WORDS_PER_MINUTE
+from src.manual_script import build_manual_story
 from src.voice import audio_duration, concatenate_audio, synthesize_paragraphs
 from src.visuals import generate_scenes
 
@@ -77,9 +78,19 @@ def _render_scene(image: Path, duration: float, destination: Path, resolution: s
 
 def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int = 12,
                        voice: str = "af_heart", resolution: str = "1280x720",
-                       angle: str = "", output_dir: Path | str = Path("output")) -> dict:
+                       angle: str = "", output_dir: Path | str = Path("output"), manual_script: str = "") -> dict:
     if not 5 <= int(duration_minutes) <= 8:
         raise ValueError("Duration must be between 5 and 8 minutes.")
+    # Validate the supplied script before touching any previous output or starting expensive models.
+    story = build_manual_story(topic, manual_script)
+    minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
+    maximum_words = int(duration_minutes * WORDS_PER_MINUTE * 1.12)
+    if not minimum_words <= story.word_count <= maximum_words:
+        raise RuntimeError(
+            f"Manual script has {story.word_count} words for a {duration_minutes}-minute target; "
+            f"expected {minimum_words}-{maximum_words}. No output was deleted and no TTS/image generation was started. "
+            "Choose a matching duration or edit the script."
+        )
     output_dir = Path(output_dir).resolve()
     slug = re.sub(r"[^a-zA-Z0-9_-]+","-",topic.lower()).strip("-")[:48] or "history"
     job_dir = output_dir / slug
@@ -87,17 +98,10 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         shutil.rmtree(job_dir)
     for sub in ["audio","scenes","clips"]:
         (job_dir/sub).mkdir(parents=True,exist_ok=True)
-    story = build_story(topic,duration_minutes,angle)
-    minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
-    if story.word_count < minimum_words:
-        raise RuntimeError(
-            f"Research/script produced only {story.word_count} words for a {duration_minutes}-minute target "
-            f"(minimum {minimum_words}). No TTS or image generation was started; choose a broader topic or retry."
-        )
     (job_dir/"script.txt").write_text("\n\n".join(story.paragraphs),encoding="utf-8")
     (job_dir/"sources.json").write_text(json.dumps(story.sources,indent=2),encoding="utf-8")
     (job_dir/"metadata.json").write_text(json.dumps({"topic":topic,"title":story.title,"target_minutes":duration_minutes,
-        "word_count":story.word_count,"resolution":resolution},indent=2),encoding="utf-8")
+        "word_count":story.word_count,"resolution":resolution,"manual_script":bool(manual_script.strip())},indent=2),encoding="utf-8")
     audio_paths, voice_engine = synthesize_paragraphs(story.paragraphs,job_dir/"audio",voice)
     durations = [audio_duration(p) for p in audio_paths]
     narration = job_dir/"narration.wav"

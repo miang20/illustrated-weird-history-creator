@@ -1,19 +1,25 @@
 # Usage and deployment
 
-## Generate a video
-A scheduled workflow runs every Sunday and rotates through a curated list of researchable Weird History topics. No AI-provider key is required.
-- Open the repository Actions tab.
-- Choose Build Weird History Video and press Run workflow.
-- Enter the topic, select 5–8 minutes, choose a Kokoro narrator, and start the run.
-- Download the weird-history-mp4 artifact when the render job completes.
+## Manual script is the primary workflow
+1. Open the Streamlit app and paste your complete narration into **MANUAL SCRIPT**.
+2. Give the project a title, then select the target runtime (5–8 minutes), 18/24/30/36 visual scene frames, narrator, and resolution.
+3. Check the displayed word count and estimated duration. A mismatch warning means you should adjust the script or target before spending render time.
+4. Choose **Render this script → final MP4**. With a configured `GITHUB_TOKEN` secret the app dispatches GitHub Actions; otherwise it links to the manual workflow.
+5. When the workflow completes, download the `weird-history-mp4` artifact.
 
-## Streamlit front end
-The app is in app.py. Deploy it to Streamlit Community Cloud by selecting this repository and app.py. The app itself does not require AI provider keys. To have the hosted app trigger the remote GitHub workflow, add a narrowly scoped GitHub token with Actions: write access as the Streamlit secret GITHUB_TOKEN. If no token is configured, the app links to the manual Actions workflow instead. Never commit the token to this public repository.
+Scene labels such as `## SCENE 1 — THE HOOK` are removed from spoken narration. Use blank lines to separate speech beats. The text is not rewritten or expanded by an AI script generator.
+
+## Script preview without rendering
+Open Actions → **Preview Manual Script**, paste the narration, choose the target duration, and run it. The workflow checks parsed word count and uploads `script.txt` plus `report.json`; it does not download image or voice models.
+
+## GitHub Actions
+Open Actions → **Render Manual Stickman Documentary** to paste a script directly into GitHub, select 5–8 minutes, scene count, Kokoro voice, and resolution, then download the `weird-history-mp4` artifact. Rendering is manual/opt-in: code pushes do not launch a costly full render. Artifacts are retained for seven days.
+
+## Visual style and limitation
+The art direction uses simple 2D YouTube-style stickman/caveman characters with readable silhouettes, primitive clothing/tools for ancient scenes, and edgy expressive body language. Props and environments follow the script's topic. Current video assembly animates the camera over generated still frames; it does not yet produce true frame-by-frame limb animation.
 
 ## Free-tier and compute notes
-- Wikipedia API and open model downloads require no AI provider key.
-- GitHub public standard runners have no GPU; SD-Turbo image generation is CPU-based and may be slow.
-- The workflow uploads MP4 plus notes for seven days to limit artifact storage.
-- A successful Python smoke test is not proof of natural voice quality or successful full rendering; the first full run is the integration test.
-
-The smoke-test workflow invokes pytest as a Python module so the repository root is importable in CI.
+- No AI-provider key is required.
+- The local open image model downloads weights and runs on CPU on standard GitHub runners, so first render can be slow.
+- To trigger the workflow directly from a hosted Streamlit app, configure a narrowly scoped GitHub token with Actions: write access as the Streamlit secret `GITHUB_TOKEN`. Never commit a token.
+- CI smoke tests do not prove successful full rendering or voice quality; a full render is the integration test.
