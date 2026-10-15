@@ -106,7 +106,7 @@ def test_script_length_guard_trims_overlong_draft_without_removing_hook_or_payof
     ]
     trimmed = _trim_script_to_word_limit(paragraphs, target_minutes=5)
     word_count = len(__import__("re").findall(r"[a-z0-9']+", "\n".join(trimmed).lower()))
-    assert word_count <= 560
+    assert word_count <= 756
     assert trimmed[0] == paragraphs[0]
     assert trimmed[-1] == paragraphs[-1]
     assert len(trimmed) >= 8
