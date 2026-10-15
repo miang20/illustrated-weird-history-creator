@@ -3,6 +3,12 @@ name: Preview Manual Script
 on:
   workflow_dispatch:
     inputs:
+      niche:
+        description: Visual preset to record in the report
+        required: true
+        type: choice
+        options: [stickman_history, survival, psychology, science, dark_mysteries]
+        default: stickman_history
       title:
         description: Video title / project name
         required: true
@@ -35,15 +41,19 @@ jobs:
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           DURATION: ${{ github.event.inputs.duration }}
         run: |
           python - <<'PY'
           import json, os, re
           from pathlib import Path
           from src.manual_script import build_manual_story, script_length_report
+          from src.niche_presets import load_niche_preset
           title = os.environ.get("TITLE", "Manual Script Documentary")
           raw = os.environ.get("MANUAL_SCRIPT", "")
           duration = int(os.environ["DURATION"])
+          niche = os.environ.get("NICHE", "stickman_history")
+          preset = load_niche_preset(niche)
           story = build_manual_story(title, raw)
           length = script_length_report(story.word_count, duration)
           if not length["within_target"]:
@@ -57,6 +67,8 @@ jobs:
           (out / "script.txt").write_text("\n\n".join(story.paragraphs), encoding="utf-8")
           (out / "report.json").write_text(json.dumps({
               "title": story.title,
+              "niche": niche,
+              "niche_display_name": preset["display_name"],
               "word_count": story.word_count,
               "paragraph_count": len(story.paragraphs),
               "target_minutes": duration,
@@ -65,7 +77,7 @@ jobs:
               "rewritten": False,
               "quality_gate": "passed"
           }, indent=2), encoding="utf-8")
-          print(f"Manual script quality gate passed: {story.word_count} words, {len(story.paragraphs)} speech beats, target {duration} minutes.")
+          print(f"Manual script quality gate passed: niche={niche}, {story.word_count} words, {len(story.paragraphs)} speech beats, target {duration} minutes.")
           PY
       - name: Upload script preview
         uses: actions/upload-artifact@v4
