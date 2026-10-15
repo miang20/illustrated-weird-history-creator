@@ -135,7 +135,7 @@ def research_topic(topic: str) -> Research:
 
 def _sentences(text: str) -> list[str]:
     text = re.sub(r"\[[0-9]+\]", "", text)
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\\"'])", text)
+    parts = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9“\\\"'])", text)
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
 def _select_sentences_for_target(sentences: list[str], target_words: int) -> list[str]:
