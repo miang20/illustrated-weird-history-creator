@@ -25,5 +25,6 @@
     "outline_width": 3,
     "margin_v": 44
   },
-  "default_voice": "af_heart"
+  "default_voice": "af_heart",
+  "postprocess": false
 }
