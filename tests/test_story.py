@@ -77,7 +77,7 @@ def test_script_quality_gate_rejects_overlong_five_minute_narration():
         "Halloween traditions changed over many centuries across different communities. " * 10
     ]
     issues = _script_quality_issues("Halloween", paragraphs, target_minutes=5)
-    assert any("target range 450-560" in issue for issue in issues)
+    assert any("target range 440-560" in issue for issue in issues)
 
 
 def test_source_grounding_does_not_misread_sentence_initial_title_case_as_a_name():
