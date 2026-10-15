@@ -89,13 +89,12 @@ def test_pollinations_retry_count_timeout_and_cache_without_network(tmp_path, mo
 def test_three_failed_pollinations_attempts_fall_back_to_local_mock(tmp_path):
     from PIL import Image
 
-    attempts = []
+    failed_attempts = []
     local_calls = []
 
     def failing_pollinations(prompt, seed, cache_dir, attempts=3):
         for _ in range(attempts):
-            attempts_list = attempts
-            attempts_list.append("failed")
+            failed_attempts.append("failed")
         raise RuntimeError("mock Pollinations outage")
 
     def local_generator():
@@ -110,7 +109,7 @@ def test_three_failed_pollinations_attempts_fall_back_to_local_mock(tmp_path):
     assert provider_name == "local-fallback:mock-local-model"
     assert cache_hit is False
     assert "mock Pollinations outage" in reason
-    assert len(attempts) == 3
+    assert len(failed_attempts) == 3
     assert len(local_calls) == 1
 
 
