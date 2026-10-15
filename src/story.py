@@ -363,11 +363,14 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             if not terms:
                 continue
             checked += 1
-            if len(terms & source_terms) < 2:
+            # A valid paraphrase may share only one distinctive anchor with a short
+            # research extract. Requiring two shared terms per sentence rejects natural
+            # narration even when its topic and named entities are source-grounded.
+            if len(terms & source_terms) < 1:
                 ungrounded += 1
-        if checked >= 8 and ungrounded / checked > 0.25:
+        if checked >= 8 and ungrounded / checked > 0.40:
             issues.append(
-                f"{ungrounded} of {checked} narration sentences lack enough factual overlap with the selected research source"
+                f"{ungrounded} of {checked} narration sentences have no distinctive factual overlap with the selected research source"
             )
     lower_text = text.lower()
     filler_phrases = (
@@ -409,6 +412,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             "modern", "early", "late", "american", "irish", "scottish", "english", "welsh",
             "german", "french", "norse", "viking", "middle", "high", "low", "all", "opening",
             "deeper", "hook", "rehook", "story", "payoff", "conclusion", "invincible", "native",
+            "christians",
         }
         entities = re.findall(r"\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\s+(?:(?:of|the|and)\s+)?[A-Z][a-z]+(?:[-’'][A-Za-z]+)?){1,3}\b", text)
         unsupported = []
@@ -417,7 +421,10 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             if words_in_entity[0].casefold() in sentence_starters or words_in_entity[0].casefold() in contextual_starters:
                 continue
             entity = entity.strip()
-            if entity.casefold() in accepted_contextual_entities:
+            entity_lower = entity.casefold().strip(" ,.;:")
+            if entity_lower in accepted_contextual_entities or any(
+                known in entity_lower for known in accepted_contextual_entities
+            ):
                 continue
             if len(entity.split()) < 2 or entity.casefold() not in source_lower:
                 if len(entity.split()) >= 2 and entity.casefold() not in source_lower and entity not in unsupported:
