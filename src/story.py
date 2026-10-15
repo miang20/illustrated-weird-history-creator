@@ -121,7 +121,7 @@ def research_topic(topic: str) -> Research:
     )
     detail.raise_for_status()
     page = next(iter(detail.json().get("query", {}).get("pages", {}).values()), {})
-    extract = re.sub(r"\s+", " ", page.get("extract", "")).strip()
+    extract = re.sub(r"\\s+", " ", page.get("extract", "")).strip()
     actual_title = page.get("title", page_title)
     if len(extract) < 500:
         raise ValueError(f"The relevant article '{actual_title}' does not contain enough detail. Try a more specific topic.")
@@ -134,8 +134,8 @@ def research_topic(topic: str) -> Research:
     return Research(actual_title, url, extract, page.get("description", "") or "", [source])
 
 def _sentences(text: str) -> list[str]:
-    text = re.sub(r"\[[0-9]+\]", "", text)
-    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9“\"'])", text)
+    text = re.sub(r"\\[[0-9]+\\]", "", text)
+    parts = re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9“\\\"'])", text)
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
 def _select_sentences_for_target(sentences: list[str], target_words: int) -> list[str]:
@@ -152,6 +152,40 @@ def _select_sentences_for_target(sentences: list[str], target_words: int) -> lis
         if words >= minimum and len(selected) >= 20:
             break
     return selected
+
+
+def _trim_script_to_word_limit(paragraphs: list[str], target_minutes: int) -> list[str]:
+    """Trim excess narration at paragraph/sentence boundaries while preserving the opening and payoff."""
+    maximum = int(target_minutes * WORDS_PER_MINUTE * 1.12)
+    result = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
+
+    def count_words(items: list[str]) -> int:
+        return len(re.findall(r"[a-z0-9']+", "\\n".join(items).lower()))
+
+    # Remove trailing sentences from middle paragraphs first, never from the opening hook
+    # or final payoff. Keep at least eight paragraphs so the story retains its shape.
+    while count_words(result) > maximum:
+        candidates = []
+        for index in range(1, len(result) - 1):
+            sentences = _sentences(result[index])
+            if len(sentences) > 1:
+                candidates.append((len(sentences[-1].split()), index, sentences))
+        if candidates:
+            _, index, sentences = max(candidates, key=lambda item: item[0])
+            result[index] = " ".join(sentences[:-1]).strip()
+            continue
+
+        if len(result) > 8:
+            # If each paragraph is a single sentence, drop the shortest middle paragraph
+            # rather than cutting a sentence in half or damaging the final payoff.
+            index = min(range(1, len(result) - 1), key=lambda i: len(result[i].split()))
+            result.pop(index)
+            continue
+
+        # Do not mutilate the hook/payoff or silently create a too-short script.
+        break
+
+    return result
 
 
 def _generate_local_script(title: str, extract: str, target_minutes: int, angle: str) -> list[str] | None:
@@ -199,8 +233,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 "Use short, varied sentences and natural spoken transitions. Add a small curiosity bridge at paragraph endings only when the next paragraph genuinely answers or deepens it. "
                 "Avoid repetitive 'but here's the twist' phrasing, empty suspense, repeated facts, and modern assumptions projected onto historical people. "
                 "Keep 10 to 16 short paragraphs. Do not overstate evidence. "
-                "Before finishing, check that the opening is concrete, the middle keeps adding revelations, and the ending pays off the opening.\n\n"
-                f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:24000]}"
+                "Before finishing, check that the opening is concrete, the middle keeps adding revelations, and the ending pays off the opening.\\n\\n"
+                f"RESEARCH NOTES (reference only; do not copy verbatim):\\n{extract[:24000]}"
             ),
         },
     ]
@@ -239,20 +273,20 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 eos_token_id=tokenizer.eos_token_id,
             )
         generated = tokenizer.decode(output[0][encoded["input_ids"].shape[1]:], skip_special_tokens=True).strip()
-        generated = re.sub(r"(?m)^\s*(?:Title|Narration|Script)\s*:\s*.*$", "", generated).strip()
+        generated = re.sub(r"(?m)^\\s*(?:Title|Narration|Script)\\s*:\\s*.*$", "", generated).strip()
         # Small local models occasionally emit beat labels despite being told not to.
         # Strip those labels so they never become spoken narration or false named entities.
         generated = re.sub(
-            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|payoff|conclusion)\s*:?\s*$",
+            r"(?im)^\\s*(?:opening\\s+hook|hook|story|rehook|deeper\\s+story|payoff|conclusion)\\s*:?\\s*$",
             "",
             generated,
         )
         generated = re.sub(
-            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|payoff|conclusion)\s*:\s*",
+            r"(?im)^\\s*(?:opening\\s+hook|hook|story|rehook|deeper\\s+story|payoff|conclusion)\\s*:\\s*",
             "",
             generated,
         ).strip()
-        paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
+        paragraphs = [p.strip() for p in re.split(r"\\n\\s*\\n+", generated) if len(p.split()) >= 20]
         if len(paragraphs) < 10:
             sentences = _sentences(generated)
             chunk_size = 2 if len(sentences) >= 16 else 3
@@ -261,6 +295,9 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 for i in range(0, len(sentences), chunk_size)
                 if sentences[i:i+chunk_size]
             ]
+        # The model can ignore its requested word budget. Trim only at paragraph/sentence
+        # boundaries before running the hard quality gate, preserving the hook and payoff.
+        paragraphs = _trim_script_to_word_limit(paragraphs, target_minutes)
         issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=extract)
         if not issues:
             break
@@ -274,7 +311,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
 
 def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: int, source_text: str = "") -> list[str]:
     """Reject scripts that are too short, repetitive, generic, or disconnected from the subject."""
-    text = "\n".join(paragraphs).strip()
+    text = "\\n".join(paragraphs).strip()
     words = re.findall(r"[a-z0-9']+", text.lower())
     target = target_minutes * WORDS_PER_MINUTE
     issues: list[str] = []
@@ -302,7 +339,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     # Reject unsupported multi-word named entities while avoiding false positives from
     # sentence-initial title case (for example, 'The strange event changed everything').
     if source_text:
-        source_lower = re.sub(r"\s+", " ", source_text).casefold()
+        source_lower = re.sub(r"\\s+", " ", source_text).casefold()
         # These established cultural/geographic terms may be omitted from a truncated
         # overview article; they are not invented people or fabricated events.
         accepted_contextual_entities = {
@@ -317,7 +354,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
             "he", "her", "his", "in", "it", "its", "on", "over", "she", "the", "these",
             "they", "this", "those", "through", "while", "when", "where", "which", "who",
         }
-        entities = re.findall(r"\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\s+(?:(?:of|the|and)\s+)?[A-Z][a-z]+(?:[-’'][A-Za-z]+)?){1,3}\b", text)
+        entities = re.findall(r"\\b[A-Z][a-z]+(?:[-’'][A-Za-z]+)?(?:\\s+(?:(?:of|the|and)\\s+)?[A-Z][a-z]+(?:[-’'][A-Za-z]+)?){1,3}\\b", text)
         unsupported = []
         for entity in entities:
             words_in_entity = entity.split()
