@@ -1,6 +1,6 @@
 from PIL import Image
 
-from src.visuals import _apply_monochrome_line_art
+from src.image_providers import apply_monochrome_line_art
 
 
 def test_monochrome_treatment_outputs_only_black_and_white_pixels():
@@ -8,7 +8,7 @@ def test_monochrome_treatment_outputs_only_black_and_white_pixels():
     source.putpixel((0, 0), (15, 30, 45))
     source.putpixel((1, 0), (120, 80, 50))
     source.putpixel((2, 0), (240, 20, 20))
-    result = _apply_monochrome_line_art(source)
+    result = apply_monochrome_line_art(source)
 
     assert result.mode == "RGB"
     assert result.size == source.size
