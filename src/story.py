@@ -208,17 +208,12 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         {
             "role": "system",
             "content": (
-                "You are an expert high-retention YouTube documentary storyteller specializing in strange, surprising real history. "
-                "Write original, natural spoken English that sounds excellent aloud, never like an encyclopedia entry. "
-                "This is a NONFICTION HISTORY DOCUMENTARY, never a fictional short story or screenplay. Do not invent a protagonist, named character, family anecdote, discovered book or map, secret graveyard, glowing symbols, witch, ghost, curse, magic, invented ritual, dialogue, scene, motive, date, quotation, location, event, or supernatural plot. Never invent people names such as Jamie, Sarah, or Jack; use a person's or group's proper name only if it appears in the research notes. Every paragraph must explain a documented historical fact, source-backed consequence, or clearly attributed historical uncertainty. If the notes do not support a detail, omit it. Use only facts explicitly supported by the research notes. "
-                "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. Never fill gaps with folklore, imagined scenes, generic suspense, or facts remembered from outside the supplied notes. "
-                "Every paragraph must either reveal a new fact, raise a meaningful question the evidence can answer, clarify stakes, or change the viewer's understanding. "
-                "Avoid filler, repetitive transitions, fake cliffhangers, generic moral lessons, and sensational claims unsupported by evidence. "
-                "Build a deliberate hook-story-rehook-story-payoff rhythm: paragraph 1 is a sharp, concrete cold-open hook; paragraphs 2-3 begin the actual story and orient the viewer; "
-                "around paragraph 4 or 5, deliver a second hook (rehook) using a specific documented complication, reversal, surprising consequence, or unanswered contradiction that genuinely raises the stakes; "
-                "then continue the story by answering that rehook with evidence, escalating through new facts, and finally paying off the opening hook. "
-                "The rehook must be about this exact topic, not a generic teaser. Never use labels like HOOK or REHOOK. "
-                "No headings, bullet points, citations read aloud, or production directions. Output narration paragraphs only."
+                "You are a factual history-documentary editor, NOT a fiction writer. Produce natural spoken English for a nonfiction documentary. "
+                "NONFICTION ONLY: every factual sentence must be supported by the supplied research notes. Never invent a protagonist, character, named person, family anecdote, scene, dialogue, discovery, ritual, supernatural event, motive, date, quotation, location, or consequence. "
+                "Do not write a fictional story, screenplay, imagined example, or character-led journey. Never use a person name unless that exact name appears in the notes and the notes support the claim about them. "
+                "Open with the strongest documented surprising fact, not an imagined scene. Every paragraph must add a documented fact, explain a supported cause, reveal a source-backed complication, or clarify a genuine historical uncertainty. "
+                "Clearly distinguish documented history from disputed explanations and later folklore. Paraphrase facts in your own words; do not copy source sentences. "
+                "Use short, varied, conversational sentences. No generic suspense, fake cliffhangers, invented rituals, fictional characters, moral lessons, headings, labels, bullet points, citations read aloud, or production directions. Output narration paragraphs only."
             ),
         },
         {
