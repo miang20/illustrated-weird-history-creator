@@ -9,6 +9,12 @@ on:
         type: choice
         options: [stickman_history, survival, psychology, science, dark_mysteries]
         default: stickman_history
+      provider:
+        description: Image generation provider
+        required: true
+        type: choice
+        options: [pollinations, local]
+        default: pollinations
       title:
         description: Video title / output name
         required: true
@@ -57,6 +63,13 @@ jobs:
       HF_HUB_ETAG_TIMEOUT: "30"
     steps:
       - uses: actions/checkout@v4
+      - name: Restore free scene-image cache
+        uses: actions/cache@v4
+        with:
+          path: .image-cache/
+          key: scene-image-cache-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            scene-image-cache-${{ runner.os }}-${{ github.ref_name }}-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -74,6 +87,7 @@ jobs:
       - name: Preflight renderer imports and export settings
         env:
           NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
+          PROVIDER: ${{ github.event.inputs.provider || 'pollinations' }}
           DURATION: ${{ github.event.inputs.duration || '5' }}
           SCENES: ${{ github.event.inputs.scenes || '30' }}
           VOICE: ${{ github.event.inputs.voice || 'preset_default' }}
@@ -86,9 +100,11 @@ jobs:
           from kokoro import KPipeline
           from src.manual_script import build_manual_story
           from src.niche_presets import load_niche_preset
+          from src.image_providers import validate_provider
           from src.render import render_documentary
           niche = os.environ["NICHE"]
           preset = load_niche_preset(niche)
+          provider = validate_provider(os.environ["PROVIDER"])
           duration = int(os.environ["DURATION"])
           scenes = int(os.environ["SCENES"])
           voice_input = os.environ["VOICE"]
@@ -105,13 +121,14 @@ jobs:
           sample = build_manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
           if sample.word_count < 250 or any("SCENE 1" in p for p in sample.paragraphs):
               raise SystemExit("Manual-script parser preflight failed.")
-          print(f"Preflight passed: niche={niche}, manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
+          print(f"Preflight passed: niche={niche}, provider={provider}, manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
           PY
       - name: Render the supplied manual script
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
           NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
+          PROVIDER: ${{ github.event.inputs.provider || 'pollinations' }}
           DURATION: ${{ github.event.inputs.duration }}
           SCENES: ${{ github.event.inputs.scenes }}
           VOICE: ${{ github.event.inputs.voice }}
@@ -138,6 +155,7 @@ jobs:
               output_dir=Path("output"),
               manual_script=script,
               niche=os.environ.get("NICHE", "stickman_history"),
+              provider=os.environ.get("PROVIDER", "pollinations"),
           )
           print(result["report"])
           PY
@@ -150,6 +168,8 @@ jobs:
             output/**/script.txt
             output/**/sources.json
             output/**/render_report.json
+            output/**/scenes/image_manifest.json
+            output/**/scenes/prompts.txt
             output/**/captions.srt
           if-no-files-found: error
           retention-days: 7
