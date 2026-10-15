@@ -7,7 +7,7 @@ Manual-script-first, free-first creator for long-form YouTube history, survival,
 - Optional Markdown headings or labels such as `SCENE 1 — THE HOOK` are removed from spoken narration.
 - Blank lines separate speech beats for narration and captions.
 - The app estimates narration duration and warns if the selected 5–8 minute target is a poor match.
-- A local open image model generates 2D stickman/caveman-style scene frames based on each narration beat.
+- Free Pollinations Flux generates 1280×720 scene images by default; the existing local SD-Turbo/Tiny-SD models remain as per-scene fallback.
 - Kokoro neural TTS is primary, with Piper neural TTS fallback.
 - FFmpeg assembles a 16:9 H.264/AAC MP4 with timed captions and ambient bed.
 - GitHub Actions manual workflows provide script preview and final MP4 artifacts.
@@ -19,7 +19,7 @@ The default art direction is the familiar YouTube ancient-survival/caveman stick
 
 ## GitHub Actions
 - Open Actions → **Preview Manual Script** to parse the script, check its estimated runtime, and download a preview artifact.
-- Open Actions → **Render Manual Stickman Documentary** to paste the script and choose duration, 18/24/30/36 scene frames, voice, and resolution.
+- Open Actions → **Preview Scene Images** to generate six images and inspect prompts first. For the full video, open **Render Manual Stickman Documentary** and choose niche, provider, duration, scene count, voice, and resolution.
 - Download the `weird-history-mp4` artifact when the render completes. Artifacts are retained for seven days.
 - Render is manual/opt-in; pushing code does not start an expensive full render.
 
