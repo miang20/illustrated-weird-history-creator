@@ -80,17 +80,27 @@ def load_niche_preset(name: str = DEFAULT_NICHE) -> dict[str, Any]:
 def build_scene_prompt(
     preset: dict[str, Any], topic: str, paragraph: str, index: int
 ) -> str:
-    """Compose the fixed preset identity/style with one contextual action and narration beat."""
+    """Build a universal monochrome stickman scene; only the story action changes by niche."""
     directions = preset["action_directions"]
     direction = directions[index % len(directions)]
     clean = re.sub(r"\s+", " ", paragraph).strip()[:420]
     return (
-        f"{preset['style_prefix']} Main character design (repeat exactly in every scene): "
-        f"{preset['character_look']} Scene action: {direction}. "
-        f"Environment guidance: {preset['environment_hints']} "
-        f"Color palette: {preset['color_palette']} "
-        "Show one clear action pose with readable limbs and a strong silhouette. "
-        "Do not draw written words, captions, labels, logos, or watermarks inside the image. "
-        f"Topic: {topic}. Narration beat to illustrate: {clean}. "
-        f"Avoid: {preset['negative_prompt']}."
+        "FIXED UNIVERSAL VISUAL IDENTITY — keep identical across ALL niches and scenes: "
+        "simple 2D stickman explainer drawing, pure white background (#FFFFFF), black ink lines only, "
+        "monochrome black-and-white, clean bold hand-drawn black outlines, same simple round white head "
+        "with black outline, tiny black facial features, thin black stick arms and legs, simple consistent "
+        "body proportions, readable expressive pose. No color anywhere. "
+        "Draw every object, prop, animal, building, landscape and historical detail as simple black line art "
+        "on the same pure white background. Keep the main stickman recognizable and consistent in every frame. "
+        "Niche must NEVER change the character shape, line-art style, monochrome palette, or white background. "
+        f"Scene action: {direction}. "
+        f"Story context guidance: {preset['environment_hints']} "
+        "Illustrate the actual narration beat with one specific, dynamic action; vary poses and scene composition "
+        "instead of repeating a static pose. Keep props and setting relevant to the narration and niche, "
+        "but render them only as black line drawings. No color fills, colored clothing, colored props, gray wash, "
+        "shading, gradients, textures, realistic images, vector-flat color art, or 3D. "
+        "Do not draw written words, captions, labels, logos, borders, or watermarks inside the image. "
+        f"Topic/niche: {topic}. Narration beat to illustrate: {clean}. "
+        f"Avoid: {preset['negative_prompt']}, any color, colored background, colored objects, photorealism, "
+        "3D, anime, glossy cartoon, detailed realistic anatomy."
     )
