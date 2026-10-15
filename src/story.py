@@ -219,20 +219,18 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         {
             "role": "user",
             "content": (
-                f"Write a high-retention {target_minutes}-minute Weird History YouTube documentary narration about: {title}. "
-                f"Editorial angle: {angle.strip() or 'Explain what the evidence supports about the event and clearly separate documented history from later folklore.'} "
-                f"STRICT LENGTH TARGET: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE)} words total, including all paragraphs. For a 5-minute video, aim for 450-500 words. Treat the upper number as a hard target, avoid extra explanations, and stop immediately after the payoff. Follow this story architecture without adding headings: "
-                "STORY BEATS, in this order and without headings: "
-                "(1) HOOK in paragraph 1: start with a concrete, documented event or consequence and immediate stakes. Never begin with a question or phrases such as 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. No greeting. "
-                "(2) STORY in paragraphs 2-3: begin the narrative, identify the time/place/people, and explain what was at stake in plain spoken English. "
-                "(3) REHOOK around paragraph 4 or 5: introduce a new verified detail that changes what the viewer thinks is happening, raises a sharper question, or reveals an unexpected consequence. "
-                "Do not repeat the first hook; make this a genuine new development. "
-                "(4) STORY CONTINUES: explain how events unfolded through cause and effect, escalating discoveries, a turning point, and evidence-backed explanation. "
-                "(5) PAYOFF: answer the opening hook and the rehook as far as the evidence allows, then end on one specific memorable historical implication, not a generic lesson. "
-                "Use short, varied sentences and natural spoken transitions. Add a small curiosity bridge at paragraph endings only when the next paragraph genuinely answers or deepens it. "
-                "Avoid repetitive 'but here's the twist' phrasing, empty suspense, repeated facts, and modern assumptions projected onto historical people. "
-                "Keep 10 to 16 short paragraphs. Do not overstate evidence. "
-                "Before finishing, check that every factual claim is traceable to the notes, the rehook reveals a specific supported fact, and the ending pays off the opening. If the notes do not support a detail, omit it instead of embellishing.\n\n"
+                f"Write a {target_minutes}-minute NONFICTION historical documentary narration about: {title}. "
+                f"Editorial angle: {angle.strip() or 'Explain what the evidence supports and separate documented history from later folklore.'} "
+                f"Length: {int(target_minutes * WORDS_PER_MINUTE * 0.90)}-{int(target_minutes * WORDS_PER_MINUTE)} words total. "
+                "Use 10-14 short narration paragraphs, with this factual structure: "
+                "(1) opening hook: the strongest surprising fact explicitly documented in the notes; no imagined scene. "
+                "(2) context: identify the real event, time, place, people or customs only when the notes support them. "
+                "(3) rehook around paragraph 4 or 5: introduce another documented fact, contradiction, or consequence that deepens the opening. "
+                "(4) explain the evidence and chronology using only the notes. "
+                "(5) payoff: resolve the opening using a specific supported historical implication. "
+                "This is NOT a fictional story. Do not invent or follow a protagonist, do not create character names, and do not describe a person discovering or doing something unless the notes document it. "
+                "Do not add headings or labels. Never begin with a question, 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. "
+                "If the notes cannot support a dramatic detail, omit it. No fake suspense, fictional scenes, generic moral, or unsupported claims.\n\n"
                 f"RESEARCH NOTES (the only factual source; do not copy verbatim):\n{extract[:16000]}"
             ),
         },
