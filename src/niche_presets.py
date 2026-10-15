@@ -80,7 +80,7 @@ def build_scene_prompt(
     """Compose the fixed preset identity/style with one contextual action and narration beat."""
     directions = preset["action_directions"]
     direction = directions[index % len(directions)]
-    clean = re.sub(r"\\s+", " ", paragraph).strip()[:420]
+    clean = re.sub(r"\s+", " ", paragraph).strip()[:420]
     return (
         f"{preset['style_prefix']} Main character design (repeat exactly in every scene): "
         f"{preset['character_look']} Scene action: {direction}. "
