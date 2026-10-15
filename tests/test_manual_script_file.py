@@ -12,7 +12,7 @@ def test_script_file_reading_and_blank_lines_preserved(tmp_path):
     loaded = read_manual_script("sample.txt", "ignored single-line script", repo_root=tmp_path)
     assert loaded == content
     story = build_manual_story("test", loaded, enforce_minimum=False)
-    assert story.paragraphs == ["First narration beat.", "Second narration beat.", "Third beat."]
+    assert story.paragraphs == ["First beat.", "Second beat.", "Third beat.", "Fourth beat.", "Fifth beat.", "Sixth beat."]
 
 
 def test_test_mode_allows_short_script():
