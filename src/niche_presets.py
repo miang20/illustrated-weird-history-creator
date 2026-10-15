@@ -38,7 +38,7 @@ def _validate_preset(name: str, data: Any) -> dict[str, Any]:
         raise ValueError(f"Niche preset '{name}' field 'action_directions' must contain only non-empty strings.")
     if isinstance(data["fixed_seed"], bool) or not isinstance(data["fixed_seed"], int):
         raise ValueError(f"Niche preset '{name}' field 'fixed_seed' must be an integer.")
-    if data["default_voice"] not in SUPPORTED_VOICES:
+    if not isinstance(data["default_voice"], str) or data["default_voice"] not in SUPPORTED_VOICES:
         raise ValueError(f"Niche preset '{name}' field 'default_voice' must be one of: {', '.join(sorted(SUPPORTED_VOICES))}.")
     caption = data["caption_style"]
     if not isinstance(caption, dict):
@@ -51,7 +51,7 @@ def _validate_preset(name: str, data: Any) -> dict[str, Any]:
     for field in ("text_color", "outline_color"):
         if not isinstance(caption[field], str) or not HEX_COLOR.fullmatch(caption[field]):
             raise ValueError(f"Niche preset '{name}' caption_style.{field} must be a hex color such as #FFFFFF.")
-    if caption["position"] not in POSITIONS:
+    if not isinstance(caption["position"], str) or caption["position"] not in POSITIONS:
         raise ValueError(f"Niche preset '{name}' caption_style.position must be one of: {', '.join(sorted(POSITIONS))}.")
     for field, default in (("outline_width", 2), ("margin_v", 46)):
         if field in caption and (isinstance(caption[field], bool) or not isinstance(caption[field], int) or caption[field] < 0):
