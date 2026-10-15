@@ -117,8 +117,8 @@ def build_scene_prompt(preset: dict[str, Any], topic: str, paragraph: str, index
     directions = preset["action_directions"]
     direction = directions[index % len(directions)]
     beat = _shorten_beat(paragraph, direction)
-    clothing = re.sub(r"\s+", " ", preset["clothing_hint"]).strip()
-    environment = re.sub(r"\s+", " ", preset["environment_hints"]).strip()
+    clothing = re.sub(r"\s+", " ", preset["clothing_hint"]).strip().rstrip(" .")
+    environment = re.sub(r"\s+", " ", preset["environment_hints"]).strip().rstrip(" .")
     environment = environment[:115].rsplit(" ", 1)[0] if len(environment) > 115 else environment
     prompt = (
         f"{style['style_sentence']} "
