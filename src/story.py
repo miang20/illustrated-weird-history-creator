@@ -222,6 +222,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 f"Write a {target_minutes}-minute NONFICTION historical documentary narration about: {title}. "
                 f"Editorial angle: {angle.strip() or 'Explain what the evidence supports and separate documented history from later folklore.'} "
                 f"Length: {int(target_minutes * WORDS_PER_MINUTE * 0.90)}-{int(target_minutes * WORDS_PER_MINUTE)} words total. "
+                "Actually complete the requested length; do not stop after a short summary. Never open with a question, 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. "
                 "Use 10-14 short narration paragraphs, with this factual structure: "
                 "(1) opening hook: the strongest surprising fact explicitly documented in the notes; no imagined scene. "
                 "(2) context: identify the real event, time, place, people or customs only when the notes support them. "
@@ -263,9 +264,10 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         with torch.inference_mode():
             output = model.generate(
                 **encoded,
-                max_new_tokens=target_minutes * (135 if attempt == 0 else 125),
+                max_new_tokens=target_minutes * 150,
+                min_new_tokens=target_minutes * 120,
                 # Deterministic decoding reduces spontaneous fictional names and scene beats
-                # from this small CPU model; the revision prompt changes between attempts.
+                # from this small CPU model; minimum tokens prevent early short summaries.
                 do_sample=False,
                 repetition_penalty=1.08,
                 pad_token_id=tokenizer.eos_token_id,
@@ -476,8 +478,19 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
         if unsupported:
             issues.append("multi-word names/places not found in the selected research source: " + ", ".join(unsupported[:6]))
     first = paragraphs[0].strip().lower() if paragraphs else ""
-    if first.startswith(("imagine ", "have you ever wondered", "what if ", "did you know")):
+    if first.startswith(("imagine ", "have you ever wondered", "have you ever ", "what if ", "did you know", "what makes ", "why do ", "how did ")):
         issues.append("the opening hook is generic rather than a concrete documented moment")
+    if source_text and paragraphs:
+        hook_terms = {
+            word for word in re.findall(r"[a-z0-9']+", paragraphs[0].lower())
+            if len(word) > 3 and word not in stopwords
+        }
+        source_anchor_terms = {
+            word for word in re.findall(r"[a-z0-9']+", source_text.lower())
+            if len(word) > 3 and word not in stopwords
+        }
+        if not hook_terms & source_anchor_terms:
+            issues.append("the opening hook has no distinctive anchor in the selected research source")
     return issues
 
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
