@@ -84,7 +84,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     if not 5 <= int(duration_minutes) <= 8:
         raise ValueError("Duration must be between 5 and 8 minutes.")
     preset = load_niche_preset(niche)
-    selected_voice = voice or preset["default_voice"]
+    selected_voice = preset["default_voice"] if not voice or voice == "preset_default" else voice
     # Validate the supplied script before touching any previous output or starting expensive models.
     story = build_manual_story(topic, manual_script)
     minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
