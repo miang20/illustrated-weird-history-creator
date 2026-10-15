@@ -329,6 +329,44 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     normalized_sentences = [s for s in normalized_sentences if len(s.split()) >= 8]
     if len(normalized_sentences) != len(set(normalized_sentences)):
         issues.append("the narration repeats one or more sentences")
+    # Reject drafts dominated by claims with almost no lexical connection to the research.
+    # This catches invented atmosphere and generic narration while allowing paraphrases.
+    if source_text:
+        stopwords = {
+            "about", "after", "again", "also", "although", "always", "among", "and", "any",
+            "are", "around", "because", "been", "before", "being", "between", "both", "but",
+            "can", "could", "did", "does", "doing", "each", "even", "every", "few", "for",
+            "from", "had", "has", "have", "her", "here", "him", "his", "how", "into", "its",
+            "just", "less", "many", "may", "might", "more", "most", "much", "must", "not",
+            "often", "only", "other", "our", "out", "over", "same", "she", "should", "some",
+            "such", "than", "that", "the", "their", "them", "then", "there", "these", "they",
+            "this", "those", "through", "under", "until", "upon", "very", "was", "were", "what",
+            "when", "where", "which", "while", "who", "will", "with", "would", "you", "your",
+            "one", "two", "first", "second", "last", "new", "old", "people", "person", "time",
+            "times", "year", "years", "day", "days", "night", "nights", "thing", "things", "way",
+            "ways", "made", "make", "makes", "became", "become", "began", "known", "used",
+            "using", "like", "well", "also", "many", "much",
+        }
+        source_terms = {
+            word for word in re.findall(r"[a-z0-9']+", source_lower)
+            if len(word) > 3 and word not in stopwords
+        }
+        checked = 0
+        ungrounded = 0
+        for sentence in _sentences(text):
+            terms = {
+                word for word in re.findall(r"[a-z0-9']+", sentence.lower())
+                if len(word) > 3 and word not in stopwords
+            }
+            if not terms:
+                continue
+            checked += 1
+            if len(terms & source_terms) < 2:
+                ungrounded += 1
+        if checked >= 8 and ungrounded / checked > 0.25:
+            issues.append(
+                f"{ungrounded} of {checked} narration sentences lack enough factual overlap with the selected research source"
+            )
     lower_text = text.lower()
     filler_phrases = (
         "the surrounding context matters here", "this is where things get interesting",
