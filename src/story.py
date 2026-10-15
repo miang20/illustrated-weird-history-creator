@@ -210,8 +210,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 "You are an expert high-retention YouTube documentary storyteller specializing in strange, surprising real history. "
                 "Write original, natural spoken English that sounds excellent aloud, never like an encyclopedia entry. "
-                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, or events. Use only claims supported by the research notes. "
-                "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. "
+                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, rituals, locations, or events. Use only facts explicitly supported by the research notes. Do not reconstruct atmosphere or describe people doing things unless the notes document it. "
+                "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. Never fill gaps with folklore, imagined scenes, generic suspense, or facts remembered from outside the supplied notes. "
                 "Every paragraph must either reveal a new fact, raise a meaningful question the evidence can answer, clarify stakes, or change the viewer's understanding. "
                 "Avoid filler, repetitive transitions, fake cliffhangers, generic moral lessons, and sensational claims unsupported by evidence. "
                 "Build a deliberate hook-story-rehook-story-payoff rhythm: paragraph 1 is a sharp, concrete cold-open hook; paragraphs 2-3 begin the actual story and orient the viewer; "
@@ -225,7 +225,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "role": "user",
             "content": (
                 f"Write a high-retention {target_minutes}-minute Weird History YouTube documentary narration about: {title}. "
-                f"Editorial angle: {angle.strip() or 'Explain the event, its historical context, what is known, and what remains uncertain.'} "
+                f"Editorial angle: {angle.strip() or 'Explain what the evidence supports about the event and clearly separate documented history from later folklore.'} "
                 f"STRICT LENGTH TARGET: produce {int(target_minutes * WORDS_PER_MINUTE * 0.90)} to {int(target_minutes * WORDS_PER_MINUTE)} words total, including all paragraphs. For a 5-minute video, aim for 450-500 words. Treat the upper number as a hard target, avoid extra explanations, and stop immediately after the payoff. Follow this story architecture without adding headings: "
                 "STORY BEATS, in this order and without headings: "
                 "(1) HOOK in paragraph 1: start with a concrete, documented event or consequence and immediate stakes. Never begin with a question or phrases such as 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. No greeting. "
@@ -237,8 +237,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 "Use short, varied sentences and natural spoken transitions. Add a small curiosity bridge at paragraph endings only when the next paragraph genuinely answers or deepens it. "
                 "Avoid repetitive 'but here's the twist' phrasing, empty suspense, repeated facts, and modern assumptions projected onto historical people. "
                 "Keep 10 to 16 short paragraphs. Do not overstate evidence. "
-                "Before finishing, check that the opening is concrete, the middle keeps adding revelations, and the ending pays off the opening.\n\n"
-                f"RESEARCH NOTES (reference only; do not copy verbatim):\n{extract[:24000]}"
+                "Before finishing, check that every factual claim is traceable to the notes, the rehook reveals a specific supported fact, and the ending pays off the opening. If the notes do not support a detail, omit it instead of embellishing.\n\n"
+                f"RESEARCH NOTES (the only factual source; do not copy verbatim):\n{extract[:16000]}"
             ),
         },
     ]
@@ -253,12 +253,14 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 "role": "user",
                 "content": (
                     "REVISION: The previous draft failed the quality gate. Write a fresh, "
-                    "complete narration with a concrete, documented opening hook, a genuinely "
-                    "new mid-story rehook, evidence-led story development, and a complete payoff. "
-                    f"Keep it strictly between {int(target_minutes * WORDS_PER_MINUTE * 0.90)} and "
-                    f"{int(target_minutes * WORDS_PER_MINUTE * 1.08)} words. Never start with a generic "
-                    "question or 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. "
-                    "Do not add headings."
+                    "complete narration with a concrete documented hook, a specific factual rehook, "
+                    "and a complete evidence-based payoff. Use ONLY facts explicitly supported by the "
+                    "research notes. No invented rituals, scenes, motives, atmosphere, named groups, or "
+                    "sensory details. Do not use generic filler or labels such as Hook, Story, or Rehook. "
+                    f"Quality gate feedback: {'; '.join(issues)}. "
+                    f"Keep it between {int(target_minutes * WORDS_PER_MINUTE * 0.90)} and "
+                    f"{int(target_minutes * WORDS_PER_MINUTE * 1.08)} words. "
+                    "Never start with a question, 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'."
                 ),
             })
         attempt_prompt = tokenizer.apply_chat_template(
@@ -270,8 +272,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 **encoded,
                 max_new_tokens=target_minutes * (135 if attempt == 0 else 125),
                 do_sample=True,
-                temperature=0.55 if attempt else 0.62,
-                top_p=0.88,
+                temperature=0.30 if attempt else 0.38,
+                top_p=0.82,
                 repetition_penalty=1.12,
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id,
@@ -332,6 +334,9 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
         "the surrounding context matters here", "this is where things get interesting",
         "but here's the twist", "as we can see", "in conclusion",
         "this teaches us an important lesson", "the story doesn't end there",
+        "rich tapestry", "let us delve", "this revelation challenges everything",
+        "each discovery brings us closer", "our journey takes a dramatic turn",
+        "we've traveled back through time", "universal themes", "more than just",
     )
     found_filler = [phrase for phrase in filler_phrases if lower_text.count(phrase) > 0]
     if found_filler:
