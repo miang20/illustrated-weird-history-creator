@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from src.story import WORDS_PER_MINUTE, build_story
+from src.story import WORDS_PER_MINUTE
 from src.manual_script import build_manual_story
 from src.voice import audio_duration, concatenate_audio, synthesize_paragraphs
 from src.visuals import generate_scenes
@@ -88,7 +88,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         shutil.rmtree(job_dir)
     for sub in ["audio","scenes","clips"]:
         (job_dir/sub).mkdir(parents=True,exist_ok=True)
-    story = build_manual_story(topic, manual_script) if manual_script.strip() else build_story(topic,duration_minutes,angle)
+    story = build_manual_story(topic, manual_script)
     minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
     if story.word_count < minimum_words:
         raise RuntimeError(
