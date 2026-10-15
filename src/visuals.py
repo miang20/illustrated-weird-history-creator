@@ -1,75 +1,26 @@
 from __future__ import annotations
 
 import gc
-import re
+import io
+import json
 from pathlib import Path
 
 import torch
 from diffusers import AutoPipelineForText2Image
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
-# Free, locally-run image models only. No hosted image API or paid credits.
+from src.image_providers import cache_key, is_valid_image, pollinations_image
+from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset
+
+# Free local models remain available as the no-key fallback. Do not remove.
 MODEL_CANDIDATES = [
     ("stabilityai/sd-turbo", 4, 0.0, 512, 288),
     ("segmind/tiny-sd", 20, 7.5, 512, 512),
 ]
 
-# Target the familiar YouTube ancient-survival / caveman stickman explainer look:
-# simple 2D stick characters, readable silhouettes, expressive action, hand-drawn backgrounds.
-STYLE_BIBLE = (
-    "popular YouTube 2D stickman storytelling/explainer animation style, with ancient-survival/caveman treatment when the script calls for it, simple 2D cartoon scene, "
-    "clear stickman/caveman characters with round simple heads, tiny readable facial features, "
-    "thin black line arms and legs, simple compact torsos, minimal flat cartoon anatomy, "
-    "rough primitive tunic or ragged loincloth when the setting is ancient, crude wooden spear or stone tool when relevant, "
-    "bold clean dark outlines, flat colors, hand-drawn 2D environment, readable cave and forest shapes, "
-    "simple painted backgrounds with clear foreground and background separation, expressive poses and exaggerated body language, "
-    "dynamic action frozen at the most readable moment, humorous but tense storytelling, "
-    "slightly rough hand-drawn explainer aesthetic, uncluttered composition, strong silhouette, "
-    "not 3D, not realistic humans, not photorealistic"
-)
-
-NEGATIVE_DIRECTION = (
-    "photograph, photorealistic, realistic human anatomy, live action, 3D render, CGI, glossy toy, "
-    "anime, chibi, glowing eyes, superhero armor, hyper-detailed character concept art, "
-    "overdesigned character, realistic skin texture, depth-of-field bokeh, modern clothing in an ancient scene, "
-    "contemporary objects unless the script is modern history, garbled writing, letters, captions, typography, logo, watermark, "
-    "duplicated characters, extra limbs, extra fingers, deformed hands, blurry subject, muddy low contrast, "
-    "static lineup, character turnaround sheet"
-)
-
-ACTION_DIRECTIONS = [
-    "wide story shot: the main stickman character is actively doing something in the environment, bold readable pose, clear setting",
-    "action beat: stickman crouching, sneaking, running, climbing, carrying, pointing, or reacting according to the scene context",
-    "strong reaction shot: stickman recoils, throws both arms up, stares in disbelief, or leans forward aggressively; exaggerated body language",
-    "consequence shot: several simple stickman characters panic, argue, celebrate, flee, or work together around one clear event",
-    "medium shot: one stickman makes a consequential choice with an obvious gesture; props support the narration, not distract from it",
-    "dynamic low-angle or high-angle shot showing danger, scale, or a surprising reveal, with the stickman silhouette easy to read",
-    "visual punchline or twist: a stickman reacts with a smug, horrified, suspicious, or fed-up posture that fits the narration",
-    "environment-and-action shot: a cave, village, ship, street, battlefield, or other relevant location with stickman characters moving through it",
-]
-
-
-def _scene_prompt(topic: str, paragraph: str, index: int) -> str:
-    clean = re.sub(r"\s+", " ", paragraph).strip()[:420]
-    direction = ACTION_DIRECTIONS[index % len(ACTION_DIRECTIONS)]
-    ancient_hint = (
-        "If this scene is prehistoric or ancient, use a simple caveman stickman with ragged primitive clothing, "
-        "a cave or rough ancient setting, and crude tools only when historically appropriate. "
-        "If the script covers another era or niche, keep the same simple 2D stickman design but adapt clothing, props, and setting to the actual story."
-    )
-    return (
-        f"{STYLE_BIBLE}. Scene action: {direction}. {ancient_hint} "
-        "Show an action pose, not a character lineup and not a decorative still life. "
-        "Use 1-4 main characters, simple faces, readable limbs, expressive posture, strong silhouette, "
-        "clear 2D background, limited earthy colors, and one obvious visual idea. "
-        "No written words or labels inside the image. "
-        f"Topic: {topic}. Narration beat to illustrate: {clean}. "
-        f"Avoid: {NEGATIVE_DIRECTION}."
-    )
-
 
 def _apply_2d_illustration_treatment(image: Image.Image) -> Image.Image:
-    """Flatten colors and reinforce drawn contours to keep generated frames in a coherent 2D style."""
+    """Optional local-image treatment; Pollinations images skip it by default."""
     image = image.convert("RGB")
     flat = ImageOps.posterize(image, bits=4)
     edges = ImageOps.autocontrast(ImageOps.grayscale(flat).filter(ImageFilter.FIND_EDGES))
@@ -80,58 +31,160 @@ def _apply_2d_illustration_treatment(image: Image.Image) -> Image.Image:
     return ImageEnhance.Contrast(outlined).enhance(1.06)
 
 
-def generate_scenes(topic: str, paragraphs: list[str], out_dir: Path, scene_count: int = 30) -> list[Path]:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    if not paragraphs:
-        raise ValueError("No narration paragraphs were supplied for scene generation.")
-    count = max(8, min(int(scene_count), 36))
-    indices = [round(i * (len(paragraphs) - 1) / max(1, count - 1)) for i in range(count)]
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.float16 if device == "cuda" else torch.float32
-    last_error = None
+def _open_cached(path: Path) -> Image.Image | None:
+    if not path.is_file():
+        return None
+    payload = path.read_bytes()
+    if not is_valid_image(payload):
+        path.unlink(missing_ok=True)
+        return None
+    with Image.open(io.BytesIO(payload)) as image:
+        return image.convert("RGB").copy()
 
+
+def _local_image(prompt: str, preset: dict, seed: int, cache_path: Path, local_pipe: dict) -> tuple[Image.Image, str, bool]:
+    cached = _open_cached(cache_path)
+    if cached is not None:
+        return cached, "local-cache", True
+
+    last_error = None
     for model_id, steps, guidance, model_width, model_height in MODEL_CANDIDATES:
         pipe = None
         try:
-            kwargs = {"torch_dtype": dtype}
-            if device == "cuda":
-                kwargs["variant"] = "fp16"
-            print(f"Loading local image model: {model_id} on {device}")
-            pipe = AutoPipelineForText2Image.from_pretrained(model_id, **kwargs).to(device)
-            if device == "cpu":
-                pipe.enable_attention_slicing()
-            outputs = []
-            for n, paragraph_index in enumerate(indices):
-                target = out_dir / f"scene_{n:03d}.jpg"
-                image = pipe(
-                    prompt=_scene_prompt(topic, paragraphs[paragraph_index], n),
-                    negative_prompt=NEGATIVE_DIRECTION,
-                    num_inference_steps=steps,
-                    guidance_scale=guidance,
-                    width=model_width,
-                    height=model_height,
-                ).images[0]
-                image = ImageOps.fit(image.convert("RGB"), (1024, 576), method=Image.Resampling.LANCZOS)
+            if local_pipe.get("pipeline") is None or local_pipe.get("model_id") != model_id:
+                if local_pipe.get("pipeline") is not None:
+                    del local_pipe["pipeline"]
+                    gc.collect()
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                dtype = torch.float16 if device == "cuda" else torch.float32
+                kwargs = {"torch_dtype": dtype}
+                if device == "cuda":
+                    kwargs["variant"] = "fp16"
+                print(f"Loading local fallback image model: {model_id} on {device}")
+                pipe = AutoPipelineForText2Image.from_pretrained(model_id, **kwargs).to(device)
+                if device == "cpu":
+                    pipe.enable_attention_slicing()
+                local_pipe["pipeline"] = pipe
+                local_pipe["model_id"] = model_id
+            else:
+                pipe = local_pipe["pipeline"]
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            generator = torch.Generator(device=device).manual_seed(int(seed))
+            image = pipe(
+                prompt=prompt,
+                negative_prompt=preset["negative_prompt"],
+                num_inference_steps=steps,
+                guidance_scale=guidance,
+                width=model_width,
+                height=model_height,
+                generator=generator,
+            ).images[0]
+            image = ImageOps.fit(image.convert("RGB"), (1280, 720), method=Image.Resampling.LANCZOS)
+            if preset.get("postprocess", False):
                 image = _apply_2d_illustration_treatment(image)
-                image.save(target, format="JPEG", quality=92, optimize=True)
-                outputs.append(target)
-            if len(outputs) != count:
-                raise RuntimeError(f"{model_id} returned {len(outputs)} scenes; expected {count}.")
-            print(f"Image provider succeeded: {model_id} ({len(outputs)} 2D stickman scene frames)")
-            return outputs
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            image.save(cache_path, format="JPEG", quality=92, optimize=True)
+            return image, model_id, False
         except Exception as exc:
             last_error = exc
-            print(f"Image provider failed ({model_id}); trying next local model: {type(exc).__name__}: {exc}")
-            for stale in out_dir.glob("scene_*.jpg"):
-                stale.unlink(missing_ok=True)
-        finally:
-            if pipe is not None:
-                del pipe
+            print(f"Local model failed ({model_id}); trying next local model: {type(exc).__name__}: {exc}")
+            if local_pipe.get("pipeline") is not None:
+                del local_pipe["pipeline"]
+                local_pipe["pipeline"] = None
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+    raise RuntimeError(f"All free local image models failed: {last_error}") from last_error
 
-    raise RuntimeError(
-        "All no-key local image providers failed. No fake stock-image fallback was used. "
-        f"Last image error: {last_error}"
-    ) from last_error
+
+def generate_scenes(
+    topic: str,
+    paragraphs: list[str],
+    out_dir: Path,
+    scene_count: int = 30,
+    niche: str = DEFAULT_NICHE,
+    provider: str = "pollinations",
+    cache_dir: Path | str = Path(".image-cache"),
+) -> list[Path]:
+    """Generate scene stills with free Pollinations by default and scene-local model fallback."""
+    if provider not in {"pollinations", "local"}:
+        raise ValueError("Unknown image provider. Choose 'pollinations' or 'local'.")
+    preset = load_niche_preset(niche)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if not paragraphs:
+        raise ValueError("No narration paragraphs were supplied for scene generation.")
+    count = max(1, min(int(scene_count), 36))
+    indices = [round(i * (len(paragraphs) - 1) / max(1, count - 1)) for i in range(count)]
+    cache_root = Path(cache_dir)
+    cache_root.mkdir(parents=True, exist_ok=True)
+    local_pipe: dict = {"pipeline": None, "model_id": None}
+    outputs: list[Path] = []
+    manifest: list[dict] = []
+    prompts: list[str] = []
+
+    try:
+        for n, paragraph_index in enumerate(indices):
+            prompt = build_scene_prompt(preset, topic, paragraphs[paragraph_index], n)
+            seed = int(preset["fixed_seed"])
+            prompts.append(f"SCENE {n + 1:02d}\nSEED: {seed}\nPROMPT:\n{prompt}\n")
+            target = out_dir / f"scene_{n:03d}.jpg"
+            selected_cache = cache_root / f"{cache_key(prompt, seed, provider)}.jpg"
+            local_cache = cache_root / f"{cache_key(prompt, seed, 'local')}.jpg"
+            image = None
+            provider_used = provider
+            cache_hit = False
+            fallback_reason = None
+
+            if provider == "pollinations":
+                image = _open_cached(selected_cache)
+                if image is not None:
+                    provider_used, cache_hit = "pollinations-cache", True
+                else:
+                    # If this exact scene previously fell back, reuse it instead of paying latency again.
+                    image = _open_cached(local_cache)
+                    if image is not None:
+                        provider_used, cache_hit = "local-cache-fallback", True
+                    else:
+                        try:
+                            image, _, cache_hit = pollinations_image(prompt, seed, cache_root)
+                            provider_used = "pollinations-cache" if cache_hit else "pollinations"
+                        except Exception as exc:
+                            fallback_reason = str(exc)
+                            print(f"Pollinations exhausted 3 attempts for scene {n + 1}; using local model for this scene only.")
+                            image, provider_used, cache_hit = _local_image(prompt, preset, seed, local_cache, local_pipe)
+                            provider_used = f"local-fallback:{provider_used}"
+            else:
+                image, provider_used, cache_hit = _local_image(prompt, preset, seed, selected_cache, local_pipe)
+
+            if image is None:
+                raise RuntimeError(f"No image produced for scene {n + 1}.")
+            image = ImageOps.fit(image.convert("RGB"), (1280, 720), method=Image.Resampling.LANCZOS)
+            image.save(target, format="JPEG", quality=92, optimize=True)
+            outputs.append(target)
+            manifest.append({
+                "scene": n + 1,
+                "image": target.name,
+                "provider": provider_used,
+                "cache_hit": bool(cache_hit),
+                "fallback": provider_used.startswith("local-fallback"),
+                "fallback_reason": fallback_reason,
+                "seed": seed,
+                "cache_key": cache_key(prompt, seed, provider if provider_used.startswith("pollinations") else "local"),
+            })
+            print(f"Scene {n + 1:02d}: provider={provider_used}, cache_hit={cache_hit}")
+
+        (out_dir / "prompts.txt").write_text("\n\n".join(prompts), encoding="utf-8")
+        (out_dir / "image_manifest.json").write_text(json.dumps({
+            "niche": niche,
+            "requested_provider": provider,
+            "image_count": len(outputs),
+            "fallback_count": sum(1 for item in manifest if item["fallback"]),
+            "images": manifest,
+        }, indent=2), encoding="utf-8")
+        return outputs
+    finally:
+        if local_pipe.get("pipeline") is not None:
+            del local_pipe["pipeline"]
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
