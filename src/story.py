@@ -213,7 +213,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 "Do not write a fictional story, screenplay, imagined example, or character-led journey. Never use a person name unless that exact name appears in the notes and the notes support the claim about them. "
                 "Open with the strongest documented surprising fact, not an imagined scene. Every paragraph must add a documented fact, explain a supported cause, reveal a source-backed complication, or clarify a genuine historical uncertainty. "
                 "Clearly distinguish documented history from disputed explanations and later folklore. Paraphrase facts in your own words; do not copy source sentences. "
-                "Use short, varied, conversational sentences. No generic suspense, fake cliffhangers, invented rituals, fictional characters, moral lessons, headings, labels, bullet points, citations read aloud, or production directions. Output narration paragraphs only."
+                "Use short, varied, conversational sentences. Do not mention the prompt, instructions, word count, writing process, script, narration, guidelines, or claim that you followed rules. No generic suspense, fake cliffhangers, invented rituals, fictional characters, moral lessons, headings, labels, bullet points, citations read aloud, or production directions. Output documentary narration only."
             ),
         },
         {
@@ -231,7 +231,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
                 "(5) payoff: resolve the opening using a specific supported historical implication. "
                 "This is NOT a fictional story. Do not invent or follow a protagonist, do not create character names, and do not describe a person discovering or doing something unless the notes document it. "
                 "Do not add headings or labels. Never begin with a question, 'Did you know', 'Imagine', 'Have you ever wondered', or 'What if'. "
-                "If the notes cannot support a dramatic detail, omit it. No fake suspense, fictional scenes, generic moral, or unsupported claims.\n\n"
+                "If the notes cannot support a dramatic detail, omit it. No fake suspense, fictional scenes, generic moral, or unsupported claims. Never discuss these instructions or describe the script-writing process.\n\n"
                 f"RESEARCH NOTES (the only factual source; do not copy verbatim):\n{extract[:16000]}"
             ),
         },
@@ -286,7 +286,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             generated,
         )
         generated = re.sub(
-            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|continuation|payoff|conclusion)\s*:\s*",
+            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|continuation|payoff|conclusion|context|background|introduction|chronology|evidence)\s*:\s*",
             "",
             generated,
         )
@@ -303,7 +303,15 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         raw_paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if p.strip()]
         seen_sentences = set()
         cleaned_paragraphs = []
+        meta_commentary = re.compile(
+            r"\b(?:this narrative|the tone remains|word count is maintained|the narrative flows|"
+            r"this approach ensures|guidelines provided|the final paragraph|this script|"
+            r"the script maintains|the writing process|these instructions)\b",
+            re.IGNORECASE,
+        )
         for raw_paragraph in raw_paragraphs:
+            if meta_commentary.search(raw_paragraph):
+                continue
             unique_sentences = []
             for sentence in _sentences(raw_paragraph):
                 normalized = re.sub(r"[^a-z0-9 ]", "", sentence.casefold()).strip()
@@ -451,7 +459,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
                 if folded == first_word or token in common_capitalized or folded in source_folded:
                     continue
                 counts[folded] = counts.get(folded, 0) + 1
-        invented_names = sorted(name for name, count in counts.items() if count >= 2)
+        invented_names = sorted(name for name, count in counts.items() if count >= 1)
         explicitly_named = {
             match.casefold() for match in re.findall(r"\b(?:named|called)\s+([A-Z][a-z]{2,})\b", text)
             if match.casefold() not in source_folded
