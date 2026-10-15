@@ -1,21 +1,18 @@
 {
   "display_name": "Stickman History (Default)",
-  "style_prefix": "Popular YouTube-style simple 2D stickman history explainer illustration; bold clean dark outlines, round simple heads, thin line limbs, compact flat-color bodies, expressive readable poses; no photorealism, no 3D, no live action.",
-  "character_look": "The same main stickman in every scene: a small cream-colored round head with two dot eyes, one simple expressive black mouth, thin black line arms and legs, a short charcoal tunic with a muted rust-red belt, and consistent simple proportions; flat 2D ink outline, no realistic anatomy.",
-  "color_palette": "Parchment cream, charcoal black, muted rust orange, dusty olive, and warm stone gray; flat colors with strong contrast.",
-  "environment_hints": "Use historically relevant locations, maps as unlabeled shapes, old villages, caves, ships, tools, documents, or battlefields only when the narration supports them; no invented labels or modern props in ancient scenes.",
-  "action_directions": [
-    "wide story shot: the main stickman points toward the historically relevant location",
-    "reaction pose: the main stickman recoils with both arms raised at a surprising event",
-    "decision beat: the main stickman confidently chooses between two historically relevant objects",
-    "consequence scene: a small group of stickmen panic, argue, flee, or cooperate around one clear event",
-    "investigation pose: the main stickman crouches and examines a clue or artifact",
-    "danger beat: the main stickman runs, hides, or braces against a clear threat",
-    "visual twist: the main stickman gives a suspicious side-eye or smug shrug",
-    "environment action: the main stickman moves through a village, ship, cave, street, or battlefield fitting the script"
-  ],
-  "negative_prompt": "photograph, photorealism, realistic human anatomy, live action, 3D, CGI, glossy toy, anime, chibi, glowing eyes, superhero armor, overdesigned concept art, realistic skin, bokeh, garbled writing, captions, typography, logo, watermark, duplicate main character, extra limbs, deformed hands, blurry subject, static lineup",
   "fixed_seed": 194711,
+  "environment_hints": "A simple cave, old village, ancient tool, ship, or historical object only when the narration supports it.",
+  "action_directions": [
+    "One main stickman points toward a relevant historical place or object.",
+    "One main stickman recoils with raised arms at a surprising event.",
+    "One main stickman chooses between two relevant objects.",
+    "One main stickman examines a clue or artifact.",
+    "One main stickman runs, hides, or braces against a threat.",
+    "One main stickman gives a suspicious side-eye or smug shrug.",
+    "One main stickman moves through a cave, village, ship, or street.",
+    "One main stickman reacts to a consequence of the historical event."
+  ],
+  "default_voice": "af_heart",
   "caption_style": {
     "font_size": 22,
     "text_color": "#FFFFFF",
@@ -24,6 +21,5 @@
     "outline_width": 2,
     "margin_v": 46
   },
-  "default_voice": "af_heart",
-  "postprocess": true
+  "clothing_hint": "A muted tan tunic with a dark brown belt; black line details."
 }

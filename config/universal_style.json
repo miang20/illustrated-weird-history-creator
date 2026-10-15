@@ -1,0 +1,7 @@
+{
+  "style_sentence": "Simple 2D hand-drawn stickman: one main character, round white head with thick black outline, two dot eyes, simple mouth, thin black stick arms and legs, clean bold black outlines on a pure white background. Only clothing and a few relevant props may use flat muted beige, brown, tan, or black; everything else is black line art on white. No colored backgrounds, textures, 3D, or photorealism.",
+  "character_definition": "Keep the same simple stickman proportions and face in every niche and scene. Other people or animals appear only when the narration needs them, drawn as simple stickmen or black line art.",
+  "color_rule": "Flat muted beige, brown, tan, or black ONLY on the main character's clothing and a few relevant props such as fur, a hat, robe, rope, or wood. Everything else is black line art on pure white.",
+  "exclusions": "No gradients, shading, textures, colored backgrounds, text, 3D, or photorealism.",
+  "prompt_tail": "No text, no gradients, no shading."
+}

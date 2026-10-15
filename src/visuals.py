@@ -9,7 +9,7 @@ import torch
 from diffusers import AutoPipelineForText2Image
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
-from src.image_providers import apply_monochrome_line_art, cache_key, generate_with_fallback, is_valid_image, pollinations_image, validate_provider
+from src.image_providers import apply_monochrome_line_art, cache_key, clean_line_art_background, generate_with_fallback, is_valid_image, validate_provider
 from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset
 
 # Free local models remain available as the no-key fallback. Do not remove.
@@ -72,7 +72,6 @@ def _local_image(prompt: str, preset: dict, seed: int, cache_path: Path, local_p
             generator = torch.Generator(device=device).manual_seed(int(seed))
             image = pipe(
                 prompt=prompt,
-                negative_prompt=preset["negative_prompt"],
                 num_inference_steps=steps,
                 guidance_scale=guidance,
                 width=model_width,
@@ -125,7 +124,7 @@ def generate_scenes(
         for n, paragraph_index in enumerate(indices):
             prompt = build_scene_prompt(preset, topic, paragraphs[paragraph_index], n)
             seed = int(preset["fixed_seed"])
-            prompts.append(f"SCENE {n + 1:02d}\nSEED: {seed}\nPROMPT:\n{prompt}\n")
+            prompts.append(f"SCENE {n + 1:02d}\nSEED: {seed}\nPROMPT LENGTH: {len(prompt)} characters\nPROMPT:\n{prompt}\n")
             target = out_dir / f"scene_{n:03d}.jpg"
             selected_cache = cache_root / f"{cache_key(prompt, seed, provider)}.jpg"
             local_cache = cache_root / f"{cache_key(prompt, seed, 'local')}.jpg"
@@ -139,7 +138,6 @@ def generate_scenes(
                 if image is not None:
                     provider_used, cache_hit = "pollinations-cache", True
                 else:
-                    # If this exact scene previously fell back, reuse it instead of paying latency again.
                     image = _open_cached(local_cache)
                     if image is not None:
                         provider_used, cache_hit = "local-cache-fallback", True
@@ -150,15 +148,17 @@ def generate_scenes(
                             prompt, seed, cache_root, local_for_this_scene, provider="pollinations"
                         )
                         if fallback_reason:
-                            print(f"Pollinations exhausted 3 attempts for scene {n + 1}; using local model for this scene only.")
+                            print(f"Pollinations failed for scene {n + 1}; using local model for this scene only.")
             else:
                 image, provider_used, cache_hit = _local_image(prompt, preset, seed, selected_cache, local_pipe)
 
             if image is None:
                 raise RuntimeError(f"No image produced for scene {n + 1}.")
             image = ImageOps.fit(image.convert("RGB"), (1280, 720), method=Image.Resampling.LANCZOS)
-            # Enforce the chosen universal style for Pollinations and local fallback alike.
-            image = apply_monochrome_line_art(image)
+            if preset.get("postprocess", False):
+                image = apply_monochrome_line_art(image)
+            else:
+                image = clean_line_art_background(image)
             image.save(target, format="JPEG", quality=92, optimize=True)
             outputs.append(target)
             manifest.append({
@@ -169,9 +169,10 @@ def generate_scenes(
                 "fallback": provider_used.startswith("local-fallback") or provider_used == "local-cache-fallback",
                 "fallback_reason": fallback_reason,
                 "seed": seed,
+                "prompt_length": len(prompt),
                 "cache_key": cache_key(prompt, seed, provider if provider_used.startswith("pollinations") else "local"),
             })
-            print(f"Scene {n + 1:02d}: provider={provider_used}, cache_hit={cache_hit}")
+            print(f"Scene {n + 1:02d}: provider={provider_used}, cache_hit={cache_hit}, prompt_length={len(prompt)}")
 
         (out_dir / "prompts.txt").write_text("\n\n".join(prompts), encoding="utf-8")
         (out_dir / "image_manifest.json").write_text(json.dumps({
