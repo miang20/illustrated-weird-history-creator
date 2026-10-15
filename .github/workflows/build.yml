@@ -114,12 +114,12 @@ jobs:
           PY
       - name: Render complete documentary
         env:
-          TOPIC: ${{ github.event.inputs.topic || '' }}
+          TOPIC: ${{ github.event.inputs.topic || 'The Terrifying Origins of Halloween' }}
           DURATION: ${{ github.event.inputs.duration || '5' }}
           SCENES: ${{ github.event.inputs.scenes || '30' }}
           VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
           RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
-          ANGLE: ${{ github.event.inputs.angle || '' }}
+          ANGLE: ${{ github.event.inputs.angle || 'Trace how ancient seasonal customs evolved into the Halloween traditions people recognize today, separating well-supported history from later legends.' }}
         run: |
           python - <<'PY'
           import os
