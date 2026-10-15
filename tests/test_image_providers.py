@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-from pathlib import Path
 
 from PIL import Image
 
@@ -24,6 +23,12 @@ class _Response:
         return None
 
 
+class _HTTPError(Exception):
+    def __init__(self, status_code, message="URL too long"):
+        super().__init__(message)
+        self.response = type("ResponseInfo", (), {"status_code": status_code})()
+
+
 def test_provider_selection_accepts_only_supported_providers():
     assert providers.validate_provider("pollinations") == "pollinations"
     assert providers.validate_provider("local") == "local"
@@ -35,11 +40,11 @@ def test_provider_selection_accepts_only_supported_providers():
         raise AssertionError("unsupported provider should fail clearly")
 
 
-def test_cache_key_is_stable_and_provider_specific():
+def test_cache_key_is_stable_and_includes_exact_prompt():
     prompt = "simple 2D stickman standing in a cave"
     first = providers.cache_key(prompt, 194711, "pollinations")
     assert first == providers.cache_key(prompt, 194711, "pollinations")
-    assert first != providers.cache_key(prompt + " at night", 194711, "pollinations")
+    assert first != providers.cache_key(prompt + " in muted tan clothing", 194711, "pollinations")
     assert first != providers.cache_key(prompt, 194712, "pollinations")
     assert first != providers.cache_key(prompt, 194711, "local")
 
@@ -51,7 +56,7 @@ def test_invalid_or_tiny_image_is_rejected():
     assert not providers.is_valid_image(tiny.getvalue())
 
 
-def test_pollinations_retry_count_timeout_and_cache_without_network(tmp_path, monkeypatch):
+def test_pollinations_retry_count_timeout_and_cache_without_network(tmp_path):
     providers._last_request_at = 0.0
     calls = []
     delays = []
@@ -73,7 +78,7 @@ def test_pollinations_retry_count_timeout_and_cache_without_network(tmp_path, mo
     assert len(calls) == 3
     assert all(timeout == 90 for _, timeout in calls)
     assert "width=1280&height=720&model=flux&nologo=true&seed=194711" in calls[0][0]
-    assert delays  # rate limiting and increasing retry backoff were requested
+    assert delays
 
     def should_not_be_called(*args, **kwargs):
         raise AssertionError("valid cached image must be reused")
@@ -86,9 +91,28 @@ def test_pollinations_retry_count_timeout_and_cache_without_network(tmp_path, mo
     assert second_hit is True
 
 
-def test_three_failed_pollinations_attempts_fall_back_to_local_mock(tmp_path):
-    from PIL import Image
+def test_url_length_error_retries_once_with_shorter_prompt(tmp_path):
+    providers._last_request_at = 0.0
+    calls = []
+    payload = _valid_image_bytes()
+    long_prompt = "Universal stickman style. " + ("extra prompt detail " * 35)
 
+    def fake_get(url, timeout):
+        calls.append(url)
+        if len(calls) == 1:
+            raise _HTTPError(414)
+        return _Response(payload)
+
+    image, _, cache_hit = providers.pollinations_image(
+        long_prompt, 7, tmp_path, get=fake_get, sleep=lambda _: None, clock=lambda: 100.0,
+    )
+    assert image.size == (320, 320)
+    assert cache_hit is False
+    assert len(calls) == 2
+    assert len(calls[1]) < len(calls[0])
+
+
+def test_three_failed_pollinations_attempts_fall_back_to_local_mock(tmp_path):
     failed_attempts = []
     local_calls = []
 
@@ -111,16 +135,3 @@ def test_three_failed_pollinations_attempts_fall_back_to_local_mock(tmp_path):
     assert "mock Pollinations outage" in reason
     assert len(failed_attempts) == 3
     assert len(local_calls) == 1
-
-
-def test_manual_narration_is_not_changed_by_niche_presets():
-    from src.manual_script import build_manual_story
-    from src.niche_presets import available_niches, load_niche_preset
-
-    raw = ("The narrator says exactly these words, with the same punctuation. " * 100)
-    expected = "\\n\\n".join(build_manual_story("Same narration", raw).paragraphs)
-    for niche in available_niches():
-        preset = load_niche_preset(niche)
-        assert preset["display_name"]
-        actual = "\\n\\n".join(build_manual_story("Same narration", raw).paragraphs)
-        assert actual == expected

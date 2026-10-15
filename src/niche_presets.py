@@ -7,15 +7,19 @@ from typing import Any
 
 DEFAULT_NICHE = "stickman_history"
 SUPPORTED_VOICES = {"af_heart", "am_michael"}
-PRESET_DIR = Path(__file__).resolve().parent.parent / "config" / "niches"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+PRESET_DIR = ROOT_DIR / "config" / "niches"
+UNIVERSAL_STYLE_PATH = ROOT_DIR / "config" / "universal_style.json"
 REQUIRED_FIELDS = {
-    "display_name", "style_prefix", "character_look", "color_palette",
-    "environment_hints", "action_directions", "negative_prompt",
-    "fixed_seed", "caption_style", "default_voice",
+    "display_name", "fixed_seed", "environment_hints", "action_directions",
+    "default_voice", "caption_style", "clothing_hint",
 }
+OPTIONAL_FIELDS = {"postprocess"}
 CAPTION_FIELDS = {"font_size", "text_color", "outline_color", "position"}
 POSITIONS = {"bottom_center", "top_center", "middle_center", "bottom_left", "top_left", "bottom_right", "top_right"}
 HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+PROMPT_MAX_CHARS = 900
+PROMPT_TARGET_CHARS = (500, 700)
 
 
 def available_niches() -> list[str]:
@@ -23,25 +27,42 @@ def available_niches() -> list[str]:
     return sorted(path.stem for path in PRESET_DIR.glob("*.json") if path.is_file())
 
 
+def load_universal_style() -> dict[str, str]:
+    try:
+        data = json.loads(UNIVERSAL_STYLE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Could not read universal visual style at {UNIVERSAL_STYLE_PATH}: {exc}") from exc
+    required = {"style_sentence", "character_definition", "color_rule", "exclusions", "prompt_tail", "negative_prompt"}
+    if not isinstance(data, dict) or required - set(data):
+        raise ValueError("Universal visual style is missing required fields.")
+    if any(not isinstance(data[key], str) or not data[key].strip() for key in required):
+        raise ValueError("Universal visual style fields must be non-empty strings.")
+    return data
+
+
 def _validate_preset(name: str, data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"Niche preset '{name}' must contain a JSON object.")
     missing = sorted(REQUIRED_FIELDS - set(data))
+    extra = sorted(set(data) - REQUIRED_FIELDS - OPTIONAL_FIELDS)
     if missing:
         raise ValueError(f"Niche preset '{name}' is missing required field(s): {', '.join(missing)}.")
-    for field in ("display_name", "style_prefix", "character_look", "color_palette", "environment_hints", "negative_prompt"):
+    if extra:
+        raise ValueError(f"Niche preset '{name}' contains unsupported field(s): {', '.join(extra)}.")
+    for field in ("display_name", "environment_hints", "clothing_hint"):
         if not isinstance(data[field], str) or not data[field].strip():
             raise ValueError(f"Niche preset '{name}' field '{field}' must be a non-empty string.")
     if not isinstance(data["action_directions"], list) or not 8 <= len(data["action_directions"]) <= 10:
         raise ValueError(f"Niche preset '{name}' field 'action_directions' must be a list of 8-10 non-empty strings.")
     if any(not isinstance(item, str) or not item.strip() for item in data["action_directions"]):
         raise ValueError(f"Niche preset '{name}' field 'action_directions' must contain only non-empty strings.")
+    if any(re.search(r"\b(group of stickmen|crowd of stickmen|two stickmen)\b", item, re.I) for item in data["action_directions"]):
+        raise ValueError(f"Niche preset '{name}' action directions must center one main stickman.")
     if isinstance(data["fixed_seed"], bool) or not isinstance(data["fixed_seed"], int):
         raise ValueError(f"Niche preset '{name}' field 'fixed_seed' must be an integer.")
     if not isinstance(data["default_voice"], str) or data["default_voice"] not in SUPPORTED_VOICES:
         raise ValueError(f"Niche preset '{name}' field 'default_voice' must be one of: {', '.join(sorted(SUPPORTED_VOICES))}.")
-    data.setdefault("postprocess", False)
-    if not isinstance(data["postprocess"], bool):
+    if "postprocess" in data and not isinstance(data["postprocess"], bool):
         raise ValueError(f"Niche preset '{name}' field 'postprocess' must be true or false.")
     caption = data["caption_style"]
     if not isinstance(caption, dict):
@@ -74,33 +95,46 @@ def load_niche_preset(name: str = DEFAULT_NICHE) -> dict[str, Any]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Could not read niche preset '{name}' at {path}: {exc}") from exc
-    return _validate_preset(name, data)
+    _validate_preset(name, data)
+    load_universal_style()
+    return data
 
 
-def build_scene_prompt(
-    preset: dict[str, Any], topic: str, paragraph: str, index: int
-) -> str:
-    """Build a universal monochrome stickman scene; only the story action changes by niche."""
+def _shorten_beat(paragraph: str, fallback: str) -> str:
+    """Reduce a narration beat to its first key sentence without mutating stored narration."""
+    clean = re.sub(r"(?im)^\s*(?:#{1,6}\s*)?(?:scene\s+\d+\s*[-—:]?[^\n]*|\[scene[^\]]*\])\s*$", " ", paragraph)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if not clean:
+        clean = fallback
+    sentence = re.split(r"(?<=[.!?])\s+", clean, maxsplit=1)[0].strip()
+    sentence = sentence[:140].rsplit(" ", 1)[0].rstrip(" ,;:") if len(sentence) > 140 else sentence
+    return sentence or fallback
+
+
+def build_scene_prompt(preset: dict[str, Any], topic: str, paragraph: str, index: int) -> str:
+    """Build a compact shared-style prompt; narration is only shortened for image prompting."""
+    style = load_universal_style()
     directions = preset["action_directions"]
     direction = directions[index % len(directions)]
-    clean = re.sub(r"\s+", " ", paragraph).strip()[:420]
-    return (
-        "FIXED UNIVERSAL VISUAL IDENTITY — keep identical across ALL niches and scenes: "
-        "simple 2D stickman explainer drawing, pure white background (#FFFFFF), black ink lines only, "
-        "monochrome black-and-white, clean bold hand-drawn black outlines, same simple round white head "
-        "with black outline, tiny black facial features, thin black stick arms and legs, simple consistent "
-        "body proportions, readable expressive pose. No color anywhere. "
-        "Draw every object, prop, animal, building, landscape and historical detail as simple black line art "
-        "on the same pure white background. Keep the main stickman recognizable and consistent in every frame. "
-        "Niche must NEVER change the character shape, line-art style, monochrome palette, or white background. "
-        f"Scene action: {direction}. "
-        f"Story context guidance: {preset['environment_hints']} "
-        "Illustrate the actual narration beat with one specific, dynamic action; vary poses and scene composition "
-        "instead of repeating a static pose. Keep props and setting relevant to the narration and niche, "
-        "but render them only as black line drawings. No color fills, colored clothing, colored props, gray wash, "
-        "shading, gradients, textures, realistic images, vector-flat color art, or 3D. "
-        "Do not draw written words, captions, labels, logos, borders, or watermarks inside the image. "
-        f"Topic/niche: {topic}. Narration beat to illustrate: {clean}. "
-        f"Avoid: {preset['negative_prompt']}, any color, colored background, colored objects, photorealism, "
-        "3D, anime, glossy cartoon, detailed realistic anatomy."
+    beat = _shorten_beat(paragraph, direction)
+    clothing = re.sub(r"\s+", " ", preset["clothing_hint"]).strip().rstrip(" .")
+    environment = re.sub(r"\s+", " ", preset["environment_hints"]).strip().rstrip(" .")
+    environment = environment[:115].rsplit(" ", 1)[0] if len(environment) > 115 else environment
+    prompt = (
+        f"{style['style_sentence']} "
+        f"Clothing: {clothing}. "
+        f"Action: {beat} "
+        f"Setting: {environment}. "
+        f"{style['prompt_tail']}"
     )
+    if len(prompt) > PROMPT_MAX_CHARS:
+        available = PROMPT_MAX_CHARS - len(style["style_sentence"]) - len(f" Clothing: {clothing}. Action:  Setting: . {style['prompt_tail']}")
+        beat = beat[:max(30, available // 2)].rsplit(" ", 1)[0]
+        environment = environment[:max(25, available - len(beat))].rsplit(" ", 1)[0]
+        prompt = (
+            f"{style['style_sentence']} Clothing: {clothing}. "
+            f"Action: {beat} Setting: {environment}. {style['prompt_tail']}"
+        )
+    if len(prompt) > PROMPT_MAX_CHARS:
+        raise ValueError(f"Built scene prompt exceeds {PROMPT_MAX_CHARS} characters ({len(prompt)}).")
+    return prompt

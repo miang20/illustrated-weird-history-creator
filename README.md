@@ -7,46 +7,33 @@ Manual-script-first, free-first creator for long-form YouTube history, survival,
 - Optional Markdown headings or labels such as `SCENE 1 — THE HOOK` are removed from spoken narration.
 - Blank lines separate speech beats for narration and captions.
 - The app estimates narration duration and warns if the selected 5–8 minute target is a poor match.
-- Free Pollinations Flux generates 1280×720 scene images by default; the existing local SD-Turbo/Tiny-SD models remain as per-scene fallback.
+- Free Pollinations Flux generates 1280×720 scene images by default; existing local SD-Turbo/Tiny-SD models remain as per-scene fallback.
 - Kokoro neural TTS is primary, with Piper neural TTS fallback.
 - FFmpeg assembles a 16:9 H.264/AAC MP4 with timed captions and ambient bed.
 - GitHub Actions manual workflows provide script preview and final MP4 artifacts.
 
-## Visual direction
-The default art direction is the familiar YouTube ancient-survival/caveman stickman explainer look: simple 2D stick characters, round heads, thin line limbs, flat cartoon colors, rough ancient clothing/tools when the setting calls for them, expressive/savage body language, and hand-drawn story environments. Clothing, props, and settings adapt to the pasted script's topic while the simple stickman character design stays consistent.
+## Universal visual style
+Every niche loads `config/universal_style.json`: one consistent simple 2D hand-drawn stickman, round white head with thick black outline, two dot eyes, simple mouth, thin black stick arms and legs, clean bold black outlines, and pure white background. Flat muted beige/brown/tan/black is permitted only on character clothing and a few relevant props; everything else remains black line art on white. No gradients, shading, textures, colored backgrounds, text, 3D, or photorealism. Niche presets may change the setting and action, not the character definition.
 
-**Current rendering limitation:** image generation creates scene stills, then FFmpeg adds camera pan/zoom motion. It does not yet animate individual limbs as true frame-by-frame character animation. The prompts aim for strong action poses and visual variety, but do not claim full character animation.
+The scene prompt is built from the shared style sentence, the niche's muted clothing hint, one shortened key sentence from the narration beat, a short environment hint, and a brief negative tail. The stored narration is never modified. Prompt length is capped at 900 characters and logged per scene in `prompts.txt` and the image manifest/report.
+
+**Rendering limitation:** image generation creates still scenes, then FFmpeg adds camera pan/zoom. It does not yet animate individual limbs as true frame-by-frame character animation.
 
 ## GitHub Actions
-- Open Actions → **Preview Manual Script** to parse the script, check its estimated runtime, and download a preview artifact.
-- Open Actions → **Preview Scene Images** to generate six images and inspect prompts first. For the full video, open **Render Manual Stickman Documentary** and choose niche, provider, duration, scene count, voice, and resolution.
+- Open Actions → **Preview Manual Script** to parse the script, check estimated runtime, and download a preview artifact.
+- **Preview Scene Images** generates six images and prompts for inspection. It does not create voice or video.
+- **Render Manual Stickman Documentary** generates the final MP4. Rendering remains manual/opt-in.
 - Download the `weird-history-mp4` artifact when the render completes. Artifacts are retained for seven days.
-- Render is manual/opt-in; pushing code does not start an expensive full render.
-
-## Streamlit deployment
-Deploy `app.py` from this repository. To let the hosted app trigger GitHub Actions directly, add a narrowly scoped GitHub token with Actions: write permission to Streamlit secrets as `GITHUB_TOKEN`. Never commit the token to the repository. Without that token, the app links to the manual Actions workflow.
 
 ## Free-tier and compute notes
-- No AI-provider API key is needed.
-- Public model downloads and Wikipedia may require internet access.
-- GitHub standard runners are CPU-only; the first image-model download and 30-scene render can take a long time.
-- A successful smoke test is not proof of natural voice quality or a successful full render. Full render remains the integration test.
+- No AI-provider API key is required.
+- Pollinations is free/no-key but availability, speed, and image quality can vary.
+- Local fallback keeps the existing free SD-Turbo model and Tiny-SD fallback; CPU model downloads can be slow.
+- Scene images are cached in `.image-cache/` by exact prompt + seed + provider.
+- Gentle cleanup uses autocontrast and whitens near-white background pixels while preserving color and anti-aliased lines. The legacy hard black/white threshold filter remains available only when a niche explicitly opts into `"postprocess": true`; it defaults off.
+- Lightweight tests do not prove image-provider availability or successful full rendering.
 
 ## Niche presets
+Five presets are available: Stickman History (default), Survival, Psychology, Science, and Dark Mysteries. Each niche JSON contains only its display name, fixed seed, environment hints, action directions, default voice, caption style, and muted clothing hint. Every action centers one main stickman; other people or animals may appear only when the narration needs them and should be simple stickman/line-art.
 
-Choose a niche preset in the Streamlit sidebar or the manual GitHub Actions workflow: **Stickman History (default)**, Survival, Psychology, Science, or Dark Mysteries. The default preset keeps the existing simple 2D stickman/caveman-history direction and uses `af_heart` by default. Your pasted narration is not rewritten by a preset; presets only guide scene prompts, palette, caption appearance, and default voice.
-
-To add a niche, copy one JSON file from `config/niches/`, give it a new filename such as `space.json`, and edit the same fields. Keep `style_prefix` explicitly simple 2D stickman (not photorealistic or 3D), keep 8–10 `action_directions`, and use `af_heart` or `am_michael` for `default_voice`. Add the new preset name to the choices in both GitHub workflow files. The image model is unchanged and runs locally; no paid API is introduced.
-## Image providers and six-scene preview
-
-- **Pollinations (default)** requests free 1280×720 Flux images without an API key. Anonymous service availability, speed, and image quality can vary.
-- **Local** uses the existing free SD-Turbo model, with Tiny-SD as a fallback; these models are retained.
-- Each Pollinations scene is tried up to three times, with a 90-second request timeout and at least 15 seconds between requests. Invalid, tiny, or nearly blank responses are rejected. If Pollinations still fails, only that scene falls back to a local model.
-- Images are cached by prompt + niche seed + provider in `.image-cache/`; GitHub Actions restores/saves this cache between runs. Each render report records the provider and cache/fallback status for every image.
-- Pollinations images skip the optional local 2D outline/posterization filter by default. The niche JSON `postprocess` flag controls the filter for local model images.
-- To judge the look before spending time on a full video, open Actions → **Preview Scene Images**, paste the script, choose a niche and provider, and run it. It creates six still images only—no voice and no video—and uploads `scene-preview-images` with `prompts.txt` and `report.json`.
-- These are free, no-key providers, but the external Pollinations service is not guaranteed to be always available or consistently high quality. The local models remain the fallback.
-
-## Phone-friendly script files
-
-For long narration on a phone, create or upload a plain-text file under `scripts/` (for example `scripts/my_story.txt`) using GitHub's **Add file → Create new file** or upload-file screen. Paste narration into the file and keep blank lines between paragraphs. In the desired Actions workflow, set **Script file** to that repository path and leave **Script** empty. For **Preview Scene Images** only, enable **Test mode** if you intentionally want to preview a short script. Normal script preview and real renders keep their word-count quality checks.
+The same manual narration is passed through regardless of niche; a preset never rewrites or adds narration. To add a niche, copy a preset JSON, update the supported fields, then add its name to the relevant workflow choices. No paid API or new image model is required.
