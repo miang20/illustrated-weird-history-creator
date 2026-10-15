@@ -7,7 +7,7 @@ on:
         description: Video title / output name
         required: true
         type: string
-        default: "Halloween: The Dark, Weird History"
+        default: "My Stickman Documentary"
       script:
         description: Paste the complete narration. Scene headings are optional and will not be spoken.
         required: true
