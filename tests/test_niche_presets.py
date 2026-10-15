@@ -75,3 +75,15 @@ def test_narration_is_unchanged_for_every_niche_preset():
         assert current.word_count == baseline.word_count
     assert "these exact words" in baseline_text
     assert "must never rewrite them" in baseline_text
+
+def test_scene_prompt_combines_preset_identity_action_environment_and_palette():
+    from src.niche_presets import build_scene_prompt
+
+    preset = load_niche_preset("psychology")
+    prompt = build_scene_prompt(preset, "Social Anxiety", "The character hesitates before speaking.", 0)
+    assert preset["style_prefix"] in prompt
+    assert preset["character_look"] in prompt
+    assert preset["action_directions"][0] in prompt
+    assert preset["environment_hints"] in prompt
+    assert preset["color_palette"] in prompt
+    assert "The character hesitates before speaking." in prompt
