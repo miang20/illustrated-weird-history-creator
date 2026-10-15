@@ -105,7 +105,7 @@ def test_script_length_guard_trims_overlong_draft_without_removing_hook_or_payof
         "The surviving traditions explain how Halloween became the celebration people recognize today."
     ]
     trimmed = _trim_script_to_word_limit(paragraphs, target_minutes=5)
-    word_count = len(__import__("re").findall(r"[a-z0-9']+", "\\n".join(trimmed).lower()))
+    word_count = len(__import__("re").findall(r"[a-z0-9']+", "\n".join(trimmed).lower()))
     assert word_count <= 560
     assert trimmed[0] == paragraphs[0]
     assert trimmed[-1] == paragraphs[-1]
