@@ -447,9 +447,11 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     if source_text:
         source_folded = source_text.casefold()
         common_capitalized = {
-            "Halloween", "Samhain", "Celtic", "Christian", "Christians", "Europe",
-            "European", "Irish", "Roman", "Catholic", "All", "Saints", "Saint",
+            "Halloween", "Samhain", "Celtic", "Celts", "Christian", "Christians",
+            "Christianity", "Christianization", "Europe", "European", "England",
+            "Irish", "Roman", "Catholic", "All", "Saints", "Saint", "Earth",
             "Ancient", "Old", "New", "Industrial", "Revolution", "United", "States",
+            "Feralia", "Gregory", "Native", "November", "Ages", "British",
         }
         counts = {}
         for sentence in _sentences(text):
@@ -461,7 +463,7 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
                 if folded == first_word or token in common_capitalized or folded in source_folded:
                     continue
                 counts[folded] = counts.get(folded, 0) + 1
-        invented_names = sorted(name for name, count in counts.items() if count >= 1)
+        invented_names = sorted(name for name, count in counts.items() if count >= 2)
         explicitly_named = {
             match.casefold() for match in re.findall(r"\b(?:named|called)\s+([A-Z][a-z]{2,})\b", text)
             if match.casefold() not in source_folded
