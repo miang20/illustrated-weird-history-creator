@@ -32,7 +32,7 @@ def load_universal_style() -> dict[str, str]:
         data = json.loads(UNIVERSAL_STYLE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Could not read universal visual style at {UNIVERSAL_STYLE_PATH}: {exc}") from exc
-    required = {"style_sentence", "character_definition", "color_rule", "exclusions", "prompt_tail"}
+    required = {"style_sentence", "character_definition", "color_rule", "exclusions", "prompt_tail", "negative_prompt"}
     if not isinstance(data, dict) or required - set(data):
         raise ValueError("Universal visual style is missing required fields.")
     if any(not isinstance(data[key], str) or not data[key].strip() for key in required):

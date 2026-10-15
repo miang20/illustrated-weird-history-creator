@@ -3,5 +3,6 @@
   "character_definition": "Keep the same simple stickman proportions and face in every niche and scene. Other people or animals appear only when the narration needs them, drawn as simple stickmen or black line art.",
   "color_rule": "Flat muted beige, brown, tan, or black ONLY on the main character's clothing and a few relevant props such as fur, a hat, robe, rope, or wood. Everything else is black line art on pure white.",
   "exclusions": "No gradients, shading, textures, colored backgrounds, text, 3D, or photorealism.",
-  "prompt_tail": "No text, no gradients, no shading."
+  "prompt_tail": "No text, no gradients, no shading.",
+  "negative_prompt": "text, lettering, gradients, shading, textures, colored background, photorealism, 3D render, multiple main characters"
 }

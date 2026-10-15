@@ -10,7 +10,7 @@ from diffusers import AutoPipelineForText2Image
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
 from src.image_providers import apply_monochrome_line_art, cache_key, clean_line_art_background, generate_with_fallback, is_valid_image, validate_provider
-from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset
+from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset, load_universal_style
 
 # Free local models remain available as the no-key fallback. Do not remove.
 MODEL_CANDIDATES = [
@@ -72,6 +72,7 @@ def _local_image(prompt: str, preset: dict, seed: int, cache_path: Path, local_p
             generator = torch.Generator(device=device).manual_seed(int(seed))
             image = pipe(
                 prompt=prompt,
+                negative_prompt=load_universal_style()["negative_prompt"],
                 num_inference_steps=steps,
                 guidance_scale=guidance,
                 width=model_width,
