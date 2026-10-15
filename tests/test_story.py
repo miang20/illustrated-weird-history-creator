@@ -1,4 +1,4 @@
-from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, _script_quality_issues, _trim_script_to_word_limit, _title_relevance, weekly_topic, WEEKLY_TOPICS
+from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, _script_quality_issues, _trim_script_to_word_limit, _title_relevance, weekly_topic, WEEKLY_TOPICS, _curated_halloween_script
 
 def test_sentence_splitter_returns_distinct_facts():
     result = _sentences("The event began in 1518. It affected several people in the city. Historians still debate the causes of the event.")
@@ -32,11 +32,11 @@ def test_fallback_sentence_selection_uses_available_facts_without_repeating():
 
 
 def test_narration_word_target_uses_calibrated_kokoro_pace():
-    assert WORDS_PER_MINUTE == 100
+    assert WORDS_PER_MINUTE == 135
     # The generation prompt targets the nominal word count; the gate allows modest model variance.
-    assert int(5 * WORDS_PER_MINUTE * 1.12) == 560
-    assert 5 * WORDS_PER_MINUTE == 500
-    assert 8 * WORDS_PER_MINUTE == 800
+    assert int(5 * WORDS_PER_MINUTE * 1.12) == 756
+    assert 5 * WORDS_PER_MINUTE == 675
+    assert 8 * WORDS_PER_MINUTE == 1080
 
 
 def test_research_title_relevance_distinguishes_subjects():
@@ -77,7 +77,7 @@ def test_script_quality_gate_rejects_overlong_five_minute_narration():
         "Halloween traditions changed over many centuries across different communities. " * 10
     ]
     issues = _script_quality_issues("Halloween", paragraphs, target_minutes=5)
-    assert any("target range 440-560" in issue for issue in issues)
+    assert any("target range 594-756" in issue for issue in issues)
 
 
 def test_source_grounding_does_not_misread_sentence_initial_title_case_as_a_name():
@@ -139,3 +139,10 @@ def test_script_quality_gate_rejects_fictional_halloween_story():
     assert any("fictional story elements" in issue for issue in issues)
     assert any("repeated person/place names" in issue for issue in issues)
 
+
+
+def test_curated_halloween_script_meets_five_minute_runtime_target():
+    paragraphs = _curated_halloween_script()
+    words = sum(len(__import__("re").findall(r"[a-z0-9']+", p.lower())) for p in paragraphs)
+    assert words >= int(5 * WORDS_PER_MINUTE * 0.88)
+    assert len(paragraphs) >= 8
