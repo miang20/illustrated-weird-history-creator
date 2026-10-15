@@ -1,4 +1,4 @@
-from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, _script_quality_issues, _title_relevance, weekly_topic, WEEKLY_TOPICS
+from src.story import WORDS_PER_MINUTE, _sentences, _select_sentences_for_target, _script_quality_issues, _trim_script_to_word_limit, _title_relevance, weekly_topic, WEEKLY_TOPICS
 
 def test_sentence_splitter_returns_distinct_facts():
     result = _sentences("The event began in 1518. It affected several people in the city. Historians still debate the causes of the event.")
@@ -91,3 +91,30 @@ def test_source_grounding_does_not_misread_sentence_initial_title_case_as_a_name
         source_text="Halloween developed from older seasonal customs in Europe.",
     )
     assert not any("multi-word names/places not found" in issue for issue in issues)
+
+
+
+def test_script_length_guard_trims_overlong_draft_without_removing_hook_or_payoff():
+    paragraphs = [
+        "A documented opening event changed Halloween history in a surprising way."
+    ] + [
+        ("Halloween traditions changed across communities over many centuries. "
+         "People adapted seasonal customs and celebrations over time. " * 7)
+        for _ in range(9)
+    ] + [
+        "The surviving traditions explain how Halloween became the celebration people recognize today."
+    ]
+    trimmed = _trim_script_to_word_limit(paragraphs, target_minutes=5)
+    word_count = len(__import__("re").findall(r"[a-z0-9']+", "\\n".join(trimmed).lower()))
+    assert word_count <= 560
+    assert trimmed[0] == paragraphs[0]
+    assert trimmed[-1] == paragraphs[-1]
+    assert len(trimmed) >= 8
+
+
+def test_script_length_guard_leaves_in_range_draft_unchanged():
+    paragraphs = [
+        "Halloween traditions evolved across communities through many generations. " * 4
+        for _ in range(10)
+    ]
+    assert _trim_script_to_word_limit(paragraphs, target_minutes=5) == paragraphs
