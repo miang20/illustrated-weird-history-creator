@@ -1,0 +1,29 @@
+{
+  "display_name": "Dark Mysteries & Unexplained Events",
+  "style_prefix": "Popular YouTube-style simple 2D stickman dark mystery explainer illustration; clean dark ink outlines, round heads, thin limbs, flat graphic shapes, eerie but readable atmosphere and expressive suspicious poses; no photorealism, no 3D, no live action.",
+  "character_look": "The same main mystery stickman in every scene: a pale-gray round head with two dot eyes, a small expressive black mouth, thin black line arms and legs, a consistent dark-plum coat with a muted amber scarf, and stable simple proportions; flat 2D ink outline, no realistic anatomy.",
+  "color_palette": "Midnight navy, charcoal, dusty violet, pale gray, and restrained amber highlights; preserve readable silhouettes and avoid excessive darkness.",
+  "environment_hints": "Use foggy streets, old rooms, forests at dusk, abandoned buildings, archival objects, strange footprints, or ambiguous evidence only when the narration supports them; imply mystery without inventing a supernatural answer.",
+  "action_directions": [
+    "the main stickman leans forward to inspect an unexplained clue",
+    "the main stickman looks over a shoulder with a suspicious pose",
+    "the main stickman holds a small lantern while entering a dark room",
+    "the main stickman compares two conflicting pieces of evidence",
+    "the main stickman points toward a distant silhouette without resolving what it is",
+    "the main stickman crouches near footprints or a strange mark",
+    "the main stickman recoils from an unexpected sound or discovery",
+    "the main stickman studies an old document or artifact without readable text",
+    "the main stickman gestures toward an empty location where something vanished"
+  ],
+  "negative_prompt": "photograph, photorealism, realistic human anatomy, live action, 3D, CGI, gore, graphic violence, glowing demon eyes, superhero armor, readable writing, captions, watermark, logo, duplicated character, extra limbs, muddy black image, blurry subject, cluttered scene",
+  "fixed_seed": 592043,
+  "caption_style": {
+    "font_size": 23,
+    "text_color": "#FFFFFF",
+    "outline_color": "#100B1C",
+    "position": "bottom_center",
+    "outline_width": 3,
+    "margin_v": 44
+  },
+  "default_voice": "af_heart"
+}
