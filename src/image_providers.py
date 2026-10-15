@@ -7,13 +7,21 @@ from pathlib import Path
 from urllib.parse import quote
 
 import requests
-from PIL import Image, ImageStat
+from PIL import Image, ImageOps, ImageStat
 
 POLLINATIONS_BASE = "https://image.pollinations.ai/prompt/"
 REQUEST_TIMEOUT_SECONDS = 90
 MIN_REQUEST_INTERVAL_SECONDS = 15
 MIN_IMAGE_BYTES = 5_000
 MIN_DIMENSION = 256
+
+
+def apply_monochrome_line_art(image: Image.Image) -> Image.Image:
+    """Normalize any provider image to black drawing on a pure white background."""
+    grayscale = ImageOps.autocontrast(ImageOps.grayscale(image.convert("RGB")))
+    binary = grayscale.point(lambda value: 0 if value < 178 else 255, mode="1")
+    return binary.convert("RGB")
+
 
 _last_request_at = 0.0
 
