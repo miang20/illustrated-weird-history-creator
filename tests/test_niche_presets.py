@@ -76,14 +76,27 @@ def test_narration_is_unchanged_for_every_niche_preset():
     assert "these exact words" in baseline_text
     assert "must never rewrite them" in baseline_text
 
-def test_scene_prompt_combines_preset_identity_action_environment_and_palette():
+def test_scene_prompt_enforces_universal_black_and_white_stickman_style_for_every_niche():
     from src.niche_presets import build_scene_prompt
 
-    preset = load_niche_preset("psychology")
-    prompt = build_scene_prompt(preset, "Social Anxiety", "The character hesitates before speaking.", 0)
-    assert preset["style_prefix"] in prompt
-    assert preset["character_look"] in prompt
-    assert preset["action_directions"][0] in prompt
-    assert preset["environment_hints"] in prompt
-    assert preset["color_palette"] in prompt
-    assert "The character hesitates before speaking." in prompt
+    expected_style = (
+        "FIXED UNIVERSAL VISUAL IDENTITY",
+        "simple 2D stickman explainer drawing",
+        "pure white background (#FFFFFF)",
+        "black ink lines only",
+        "No color anywhere",
+        "same simple round white head",
+        "black line art",
+        "Niche must NEVER change the character shape",
+    )
+    for niche in sorted(EXPECTED_NICHES):
+        preset = load_niche_preset(niche)
+        prompt = build_scene_prompt(preset, "Example topic", "The character reacts to a surprising event.", 0)
+        for phrase in expected_style:
+            assert phrase in prompt
+        assert preset["action_directions"][0] in prompt
+        assert preset["environment_hints"] in prompt
+        assert "The character reacts to a surprising event." in prompt
+        assert "colored background" in prompt
+        assert "No color anywhere" in prompt
+        assert "Color palette:" not in prompt
