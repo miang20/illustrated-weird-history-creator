@@ -71,6 +71,8 @@ if word_count:
     else:
         st.success("Script length is in the expected range for the selected duration.")
 
+st.link_button("Validate script before full render", f"{ACTIONS_URL}/workflows/script-preview.yml")
+
 def configured_github_token() -> str:
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
