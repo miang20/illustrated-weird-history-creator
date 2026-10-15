@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from dataclasses import dataclass
 
 
@@ -12,7 +13,18 @@ class ManualStory:
     word_count: int
 
 
-def build_manual_story(title: str, script: str) -> ManualStory:
+def read_manual_script(script_file: str, fallback_script: str, repo_root: str | Path | None = None) -> str:
+    """Read a multi-line script from inside the repository, or use the legacy input."""
+    if not script_file or not script_file.strip():
+        return fallback_script
+    root = Path(repo_root or Path.cwd()).resolve()
+    path = (root / script_file.strip()).resolve()
+    if path != root and root not in path.parents:
+        raise ValueError("script_file must point to a file inside the repository.")
+    return path.read_text(encoding="utf-8")
+
+
+def build_manual_story(title: str, script: str, enforce_minimum: bool = True) -> ManualStory:
     """Parse user-written narration without rewriting, summarizing, or adding claims."""
     if not script or len(script.strip()) < 250:
         raise ValueError("Manual script is empty or too short. Paste the complete narration first.")
@@ -57,7 +69,7 @@ def build_manual_story(title: str, script: str) -> ManualStory:
             paragraphs = chunks
 
     word_count = len(re.findall(r"[a-z0-9']+", " ".join(paragraphs).lower()))
-    if word_count < 250:
+    if enforce_minimum and word_count < 250:
         raise ValueError(f"Manual script has only {word_count} words after parsing; paste the full narration.")
     return ManualStory(
         title=title.strip() or "Manual Script Documentary",
