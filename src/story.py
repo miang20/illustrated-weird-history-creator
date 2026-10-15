@@ -566,7 +566,8 @@ def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     # Use the curated, source-conscious default script for the current five-minute
     # Halloween project. This avoids repeated multi-minute model retries on its default topic.
     if title.casefold() == "halloween" and target_minutes == 5:
-        paragraphs = _curated_halloween_script()
+        # Keep the curated default factual while matching the calibrated five-minute voice runtime.
+        paragraphs = _trim_script_to_word_limit(_curated_halloween_script(), target_minutes)
         issues = _script_quality_issues(title, paragraphs, target_minutes, source_text=research.extract)
         if issues:
             raise RuntimeError("Curated Halloween narration failed validation: " + "; ".join(issues))
