@@ -50,7 +50,7 @@ ACTION_DIRECTIONS = [
 
 
 def _scene_prompt(topic: str, paragraph: str, index: int) -> str:
-    clean = re.sub(r"\\s+", " ", paragraph).strip()[:420]
+    clean = re.sub(r"\s+", " ", paragraph).strip()[:420]
     direction = ACTION_DIRECTIONS[index % len(ACTION_DIRECTIONS)]
     ancient_hint = (
         "If this scene is prehistoric or ancient, use a simple caveman stickman with ragged primitive clothing, "
