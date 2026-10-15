@@ -37,6 +37,7 @@ with st.sidebar:
     voice = st.selectbox(
         "Narrator", voice_options,
         index=0 if niche_preset["default_voice"] == "af_heart" else 1,
+        key=f"narrator_{niche}",
     )
     resolution = st.selectbox(
         "Export resolution",
