@@ -13,14 +13,14 @@ Scene labels such as `## SCENE 1 — THE HOOK` are removed from spoken narration
 Open Actions → **Preview Manual Script**, paste the narration, choose the target duration, and run it. The workflow checks parsed word count and uploads `script.txt` plus `report.json`; it does not download image or voice models.
 
 ## GitHub Actions
-Open Actions → **Render Manual Stickman Documentary** to paste a script directly into GitHub, select 5–8 minutes, scene count, Kokoro voice, and resolution, then download the `weird-history-mp4` artifact. Rendering is manual/opt-in: code pushes do not launch a costly full render. Artifacts are retained for seven days.
+Open Actions → **Preview Scene Images** first to inspect six images, prompts, provider choices, and fallback notes. Then open **Render Manual Stickman Documentary** to paste a script directly into GitHub, select niche/provider, 5–8 minutes, scene count, Kokoro voice, and resolution, then download the `weird-history-mp4` artifact. Rendering is manual/opt-in: code pushes do not launch a costly full render. Artifacts are retained for seven days.
 
 ## Visual style and limitation
 The art direction uses simple 2D YouTube-style stickman/caveman characters with readable silhouettes, primitive clothing/tools for ancient scenes, and edgy expressive body language. Props and environments follow the script's topic. Current video assembly animates the camera over generated still frames; it does not yet produce true frame-by-frame limb animation.
 
 ## Free-tier and compute notes
 - No AI-provider key is required.
-- The local open image model downloads weights and runs on CPU on standard GitHub runners, so first render can be slow.
+- Pollinations requires no API key and may be rate-limited or temporarily unavailable. Local fallback downloads SD-Turbo/Tiny-SD weights and runs on CPU on standard GitHub runners, so a fallback can be slow. Scene images are cached between GitHub Actions runs.
 - To trigger the workflow directly from a hosted Streamlit app, configure a narrowly scoped GitHub token with Actions: write access as the Streamlit secret `GITHUB_TOKEN`. Never commit a token.
 - CI smoke tests do not prove successful full rendering or voice quality; a full render is the integration test.
 
