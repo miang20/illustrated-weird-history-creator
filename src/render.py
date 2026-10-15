@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from src.story import WORDS_PER_MINUTE, build_story
+from src.story import WORDS_PER_MINUTE, Story, build_story
 from src.voice import audio_duration, concatenate_audio, synthesize_paragraphs
 from src.visuals import generate_scenes
 
@@ -75,9 +75,53 @@ def _render_scene(image: Path, duration: float, destination: Path, resolution: s
           "-frames:v",str(frames),"-an","-c:v","libx264","-preset","ultrafast","-crf","22",str(destination)],
          timeout=max(300,int(duration*15)))
 
+def _manual_story(title: str, script: str) -> Story:
+    """Build narration directly from user-supplied text without rewriting or researching it."""
+    if not script or len(script.strip()) < 250:
+        raise ValueError("Manual script is empty or too short. Paste the complete narration first.")
+    kept_lines = []
+    for line in script.replace("\r\n", "\n").replace("\r", "\n").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            kept_lines.append("")
+            continue
+        # Section labels guide the user but must never be spoken by the narrator.
+        if re.match(r"^\s*#{1,6}\s*", stripped):
+            continue
+        if re.match(r"(?i)^\s*scene\s+\d+\b", stripped):
+            continue
+        kept_lines.append(stripped)
+    normalized = "\n".join(kept_lines).strip()
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n+", normalized) if part.strip()]
+    if not paragraphs:
+        raise ValueError("No narration text remains after removing scene headings.")
+    # If the user pastes one wall of text, make speech chunks for readable captions and scene matching.
+    if len(paragraphs) < 6:
+        sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", " ".join(paragraphs))
+        chunks, current, words = [], [], 0
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            sentence_words = len(sentence.split())
+            if current and words + sentence_words > 42:
+                chunks.append(" ".join(current))
+                current, words = [], 0
+            current.append(sentence)
+            words += sentence_words
+        if current:
+            chunks.append(" ".join(current))
+        if chunks:
+            paragraphs = chunks
+    word_count = len(re.findall(r"[a-z0-9']+", " ".join(paragraphs).lower()))
+    if word_count < 250:
+        raise ValueError(f"Manual script has only {word_count} words after parsing; paste the full narration.")
+    return Story(title=title.strip() or "Manual Script Documentary", paragraphs=paragraphs, sources=[], word_count=word_count)
+
+
 def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int = 12,
                        voice: str = "af_heart", resolution: str = "1280x720",
-                       angle: str = "", output_dir: Path | str = Path("output")) -> dict:
+                       angle: str = "", output_dir: Path | str = Path("output"), manual_script: str = "") -> dict:
     if not 5 <= int(duration_minutes) <= 8:
         raise ValueError("Duration must be between 5 and 8 minutes.")
     output_dir = Path(output_dir).resolve()
@@ -87,7 +131,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
         shutil.rmtree(job_dir)
     for sub in ["audio","scenes","clips"]:
         (job_dir/sub).mkdir(parents=True,exist_ok=True)
-    story = build_story(topic,duration_minutes,angle)
+    story = _manual_story(topic, manual_script) if manual_script.strip() else build_story(topic,duration_minutes,angle)
     minimum_words = int(duration_minutes * WORDS_PER_MINUTE * 0.90)
     if story.word_count < minimum_words:
         raise RuntimeError(
@@ -97,7 +141,7 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     (job_dir/"script.txt").write_text("\n\n".join(story.paragraphs),encoding="utf-8")
     (job_dir/"sources.json").write_text(json.dumps(story.sources,indent=2),encoding="utf-8")
     (job_dir/"metadata.json").write_text(json.dumps({"topic":topic,"title":story.title,"target_minutes":duration_minutes,
-        "word_count":story.word_count,"resolution":resolution},indent=2),encoding="utf-8")
+        "word_count":story.word_count,"resolution":resolution,"manual_script":bool(manual_script.strip())},indent=2),encoding="utf-8")
     audio_paths, voice_engine = synthesize_paragraphs(story.paragraphs,job_dir/"audio",voice)
     durations = [audio_duration(p) for p in audio_paths]
     narration = job_dir/"narration.wav"
