@@ -1,6 +1,9 @@
 name: Preview Documentary Script
 
 on:
+  push:
+    paths:
+      - '.github/workflows/script-preview.yml'
   workflow_dispatch:
     inputs:
       topic:
