@@ -411,22 +411,21 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     # Ignore sentence-initial words and standard historical/cultural terms.
     if source_text:
         source_folded = source_text.casefold()
-        sentence_initials = {
-            re.match(r"[A-Z][a-z]+", sentence.strip()).group(0).casefold()
-            for sentence in _sentences(text) if re.match(r"[A-Z][a-z]+", sentence.strip())
-        }
         common_capitalized = {
             "Halloween", "Samhain", "Celtic", "Christian", "Christians", "Europe",
             "European", "Irish", "Roman", "Catholic", "All", "Saints", "Saint",
             "Ancient", "Old", "New", "Industrial", "Revolution", "United", "States",
         }
-        capitalized = re.findall(r"\b[A-Z][a-z]{2,}\b", text)
         counts = {}
-        for token in capitalized:
-            folded = token.casefold()
-            if folded in sentence_initials or token in common_capitalized or folded in source_folded:
-                continue
-            counts[folded] = counts.get(folded, 0) + 1
+        for sentence in _sentences(text):
+            tokens = re.findall(r"\b[A-Z][a-z]{2,}\b", sentence)
+            first = re.match(r"[A-Z][a-z]+", sentence.strip())
+            first_word = first.group(0).casefold() if first else ""
+            for token in tokens:
+                folded = token.casefold()
+                if folded == first_word or token in common_capitalized or folded in source_folded:
+                    continue
+                counts[folded] = counts.get(folded, 0) + 1
         invented_names = sorted(name for name, count in counts.items() if count >= 2)
         if invented_names:
             issues.append("repeated person/place names not found in the selected research source: " + ", ".join(invented_names[:6]))
