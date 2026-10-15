@@ -17,7 +17,7 @@ MODEL_CANDIDATES = [
 # Target the familiar YouTube ancient-survival / caveman stickman explainer look:
 # simple 2D stick characters, readable silhouettes, expressive action, hand-drawn backgrounds.
 STYLE_BIBLE = (
-    "popular YouTube ancient survival stickman animation style, simple 2D cartoon scene, "
+    "popular YouTube 2D stickman storytelling/explainer animation style, with ancient-survival/caveman treatment when the script calls for it, simple 2D cartoon scene, "
     "clear stickman/caveman characters with round simple heads, tiny readable facial features, "
     "thin black line arms and legs, simple compact torsos, minimal flat cartoon anatomy, "
     "rough primitive tunic or ragged loincloth when the setting is ancient, crude wooden spear or stone tool when relevant, "
