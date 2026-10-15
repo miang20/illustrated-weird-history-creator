@@ -46,3 +46,7 @@ To add a niche, copy one JSON file from `config/niches/`, give it a new filename
 - Pollinations images skip the optional local 2D outline/posterization filter by default. The niche JSON `postprocess` flag controls the filter for local model images.
 - To judge the look before spending time on a full video, open Actions → **Preview Scene Images**, paste the script, choose a niche and provider, and run it. It creates six still images only—no voice and no video—and uploads `scene-preview-images` with `prompts.txt` and `report.json`.
 - These are free, no-key providers, but the external Pollinations service is not guaranteed to be always available or consistently high quality. The local models remain the fallback.
+
+## Phone-friendly script files
+
+For long narration on a phone, create or upload a plain-text file under `scripts/` (for example `scripts/my_story.txt`) using GitHub's **Add file → Create new file** or upload-file screen. Paste narration into the file and keep blank lines between paragraphs. In the desired Actions workflow, set **Script file** to that repository path and leave **Script** empty. For **Preview Scene Images** only, enable **Test mode** if you intentionally want to preview a short script. Normal script preview and real renders keep their word-count quality checks.
