@@ -77,7 +77,8 @@ jobs:
           import os
           import numpy, soundfile, torch, diffusers, transformers
           from kokoro import KPipeline
-          from src.render import render_documentary, _manual_story
+          from src.manual_script import build_manual_story
+          from src.render import render_documentary
           duration = int(os.environ["DURATION"])
           scenes = int(os.environ["SCENES"])
           voice = os.environ["VOICE"]
@@ -90,7 +91,7 @@ jobs:
               raise SystemExit("Unsupported narrator voice.")
           if resolution not in ("1920x1080", "1280x720"):
               raise SystemExit("Unsupported output resolution.")
-          sample = _manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
+          sample = build_manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
           if sample.word_count < 250 or any("SCENE 1" in p for p in sample.paragraphs):
               raise SystemExit("Manual-script parser preflight failed.")
           print(f"Preflight passed: manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
