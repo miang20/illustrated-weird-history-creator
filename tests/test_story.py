@@ -118,3 +118,24 @@ def test_script_length_guard_leaves_in_range_draft_unchanged():
         for _ in range(10)
     ]
     assert _trim_script_to_word_limit(paragraphs, target_minutes=5) == paragraphs
+
+def test_script_quality_gate_rejects_fictional_halloween_story():
+    paragraphs = [
+        "A young boy named Jamie discovers a mysterious book hidden under his bed.",
+        "Jamie follows a map to a secret graveyard where glowing symbols appear.",
+        "His great-great-grandfather preserved a ritual that lets spirits return.",
+        "Jamie uncovers a sinister figure rumored to haunt the cemetery.",
+        "A witch uses dark magic to control the spirits of the dead.",
+        "Jamie finds a way to banish the witch and restore peace to the cemetery.",
+        "His adventure teaches the town a lesson about forgiveness.",
+        "This narrative explores Halloween through a fictional journey.",
+    ]
+    issues = _script_quality_issues(
+        "The Terrifying Origins of Halloween",
+        paragraphs,
+        target_minutes=5,
+        source_text="Halloween developed from older seasonal customs in Europe. Samhain was a Celtic festival.",
+    )
+    assert any("fictional story elements" in issue for issue in issues)
+    assert any("repeated person/place names" in issue for issue in issues)
+
