@@ -62,7 +62,7 @@ metrics[1].metric("Estimated narration", f"{estimated_minutes:.1f} min" if word_
 metrics[2].metric("Visual scenes", str(scene_count))
 if word_count:
     target_words = minutes * 135
-    low, high = int(target_words * 0.82), int(target_words * 1.15)
+    low, high = int(target_words * 0.90), int(target_words * 1.12)
     if not low <= word_count <= high:
         st.warning(
             f"This script is about {estimated_minutes:.1f} minutes at the current voice pace, while the selected target is "
