@@ -60,7 +60,7 @@ def generate_scenes(
             outputs = []
             for n, paragraph_index in enumerate(indices):
                 target = out_dir / f"scene_{n:03d}.jpg"
-                generator = torch.Generator(device=device).manual_seed(int(preset["fixed_seed"]) + n)
+                generator = torch.Generator(device=device).manual_seed(int(preset["fixed_seed"]))
                 image = pipe(
                     prompt=_scene_prompt(topic, paragraphs[paragraph_index], n, preset),
                     negative_prompt=preset["negative_prompt"],
