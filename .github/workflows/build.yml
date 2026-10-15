@@ -21,9 +21,14 @@ on:
         type: string
         default: "My Stickman Documentary"
       script:
-        description: Paste the complete narration. Scene headings are optional and will not be spoken.
-        required: true
+        description: Paste narration here, or use Script file below
+        required: false
         type: string
+      script_file:
+        description: Optional path to a multi-line narration file inside the repo (for example scripts/sample_test.txt)
+        required: false
+        type: string
+        default: ""
       duration:
         description: Target narration length in minutes
         required: true
@@ -127,6 +132,7 @@ jobs:
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          SCRIPT_FILE: ${{ github.event.inputs.script_file }}
           NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           PROVIDER: ${{ github.event.inputs.provider || 'pollinations' }}
           DURATION: ${{ github.event.inputs.duration }}
@@ -138,8 +144,9 @@ jobs:
           import os
           from pathlib import Path
           from src.render import render_documentary
+          from src.manual_script import read_manual_script
           title = os.environ.get("TITLE", "").strip()
-          script = os.environ.get("MANUAL_SCRIPT", "").strip()
+          script = read_manual_script(os.environ.get("SCRIPT_FILE", ""), os.environ.get("MANUAL_SCRIPT", "")).strip()
           if len(script) < 250:
               raise SystemExit("Paste the complete manual narration in the script input.")
           duration = int(os.environ["DURATION"])
