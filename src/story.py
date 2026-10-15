@@ -157,10 +157,14 @@ def _select_sentences_for_target(sentences: list[str], target_words: int) -> lis
 def _trim_script_to_word_limit(paragraphs: list[str], target_minutes: int) -> list[str]:
     """Trim excess narration at paragraph/sentence boundaries while preserving the opening and payoff."""
     maximum = int(target_minutes * WORDS_PER_MINUTE * 1.12)
-    result = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
 
     def count_words(items: list[str]) -> int:
         return len(re.findall(r"[a-z0-9']+", "\n".join(items).lower()))
+
+    # Preserve already-valid drafts exactly, including paragraph whitespace.
+    if count_words(paragraphs) <= maximum:
+        return paragraphs
+    result = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
 
     # Remove trailing sentences from middle paragraphs first, never from the opening hook
     # or final payoff. Keep at least eight paragraphs so the story retains its shape.
