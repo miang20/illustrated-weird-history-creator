@@ -293,7 +293,37 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         generated = re.sub(r"(?m)^\s*#{1,6}\s*", "", generated)
         generated = re.sub(r"\*\*(.*?)\*\*", r"\1", generated)
         generated = re.sub(r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|continuation|payoff|conclusion)\s*:\s*", "", generated)
+        generated = re.sub(
+            r"(?im)^\s*(?:a brief history(?: of halloween)?|halloween origins|halloween history|an overview|evidence and chronology|today's halloween)\s*:?\s*$",
+            "",
+            generated,
+        )
+        generated = re.sub(r"(?im)^\s*(?:according to|as reported by|as described by)\s+(?:national geographic|smithsonian(?: magazine)?)\s*,?\s*", "", generated)
         generated = re.sub(r"\n\s*\n\s*\n+", "\n\n", generated).strip()
+        raw_paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if p.strip()]
+        seen_sentences = set()
+        cleaned_paragraphs = []
+        for raw_paragraph in raw_paragraphs:
+            unique_sentences = []
+            for sentence in _sentences(raw_paragraph):
+                normalized = re.sub(r"[^a-z0-9 ]", "", sentence.casefold()).strip()
+                if not normalized or normalized in seen_sentences:
+                    continue
+                if re.search(r"\b(?:national geographic|smithsonian(?: magazine)?|brief history|halloween origins|an overview|evidence and chronology|today's halloween)\b", sentence, re.IGNORECASE):
+                    continue
+                seen_sentences.add(normalized)
+                unique_sentences.append(sentence)
+            if unique_sentences:
+                cleaned_paragraphs.append(" ".join(unique_sentences))
+        if cleaned_paragraphs:
+            opening_sentences = _sentences(cleaned_paragraphs[0])
+            if opening_sentences and (
+                opening_sentences[0].strip().endswith("?")
+                or re.match(r"(?i)^(?:did you know|imagine|have you ever|what if|what makes|why do|how did)\b", opening_sentences[0].strip())
+            ):
+                cleaned_paragraphs[0] = " ".join(opening_sentences[1:]).strip()
+                cleaned_paragraphs = [p for p in cleaned_paragraphs if p]
+        generated = "\n\n".join(cleaned_paragraphs)
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
         if len(paragraphs) < 10:
             # Split short-model output into sentence beats rather than letting seven
