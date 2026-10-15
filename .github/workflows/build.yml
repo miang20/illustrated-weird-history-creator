@@ -1,61 +1,41 @@
-name: Build Weird History Video
+name: Render Manual Stickman Documentary
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/story.py'
-      - '.github/workflows/build.yml'
-  schedule:
-    - cron: "0 7 * * 0"
   workflow_dispatch:
     inputs:
-      topic:
-        description: Historical topic for the documentary
-        required: false
+      title:
+        description: Video title / output name
+        required: true
         type: string
-        default: "The Terrifying Origins of Halloween"
+        default: "Halloween: The Dark, Weird History"
+      script:
+        description: Paste the complete narration. Scene headings are optional and will not be spoken.
+        required: true
+        type: string
       duration:
-        description: Narration duration in minutes (5 to 8)
+        description: Target narration length in minutes
         required: true
         type: choice
-        options:
-          - "5"
-          - "6"
-          - "7"
-          - "8"
+        options: ["5", "6", "7", "8"]
         default: "5"
       scenes:
-        description: Number of generated scenes
+        description: Number of generated 2D stickman scene images
         required: true
         type: choice
-        options:
-          - "18"
-          - "24"
-          - "30"
-          - "36"
+        options: ["18", "24", "30", "36"]
         default: "30"
       voice:
         description: Neural narrator voice
         required: true
         type: choice
-        options:
-          - af_heart
-          - am_michael
+        options: [af_heart, am_michael]
         default: af_heart
       resolution:
         description: Landscape export size
         required: true
         type: choice
-        options:
-          - 1920x1080
-          - 1280x720
-        default: 1920x1080
-      angle:
-        description: Editorial angle for the story (story structure is built in)
-        required: false
-        type: string
-        default: "Trace how ancient seasonal customs evolved into the Halloween traditions people recognize today, separating well-supported history from later legends."
+        options: ["1920x1080", "1280x720"]
+        default: "1920x1080"
 
 permissions:
   contents: read
@@ -87,17 +67,17 @@ jobs:
           pip install -r requirements-render.txt
       - name: Preflight renderer imports and export settings
         env:
-          DURATION: ${{ github.event.inputs.duration || '5' }}
-          SCENES: ${{ github.event.inputs.scenes || '30' }}
-          VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
-          RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
+          DURATION: \${{ github.event.inputs.duration || '5' }}
+          SCENES: \${{ github.event.inputs.scenes || '30' }}
+          VOICE: \${{ github.event.inputs.voice || 'af_heart' }}
+          RESOLUTION: \${{ github.event.inputs.resolution || '1920x1080' }}
         run: |
           python -m compileall -q app.py src
           python - <<'PY'
           import os
           import numpy, soundfile, torch, diffusers, transformers
           from kokoro import KPipeline
-          from src.render import render_documentary
+          from src.render import render_documentary, _manual_story
           duration = int(os.environ["DURATION"])
           scenes = int(os.environ["SCENES"])
           voice = os.environ["VOICE"]
@@ -110,37 +90,40 @@ jobs:
               raise SystemExit("Unsupported narrator voice.")
           if resolution not in ("1920x1080", "1280x720"):
               raise SystemExit("Unsupported output resolution.")
-          print(f"Renderer preflight passed: {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
+          sample = _manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
+          if sample.word_count < 250 or any("SCENE 1" in p for p in sample.paragraphs):
+              raise SystemExit("Manual-script parser preflight failed.")
+          print(f"Preflight passed: manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
           PY
-      - name: Render complete documentary
+      - name: Render the supplied manual script
         env:
-          TOPIC: ${{ github.event.inputs.topic || 'The Terrifying Origins of Halloween' }}
-          DURATION: ${{ github.event.inputs.duration || '5' }}
-          SCENES: ${{ github.event.inputs.scenes || '30' }}
-          VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
-          RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
-          ANGLE: ${{ github.event.inputs.angle || 'Trace how ancient seasonal customs evolved into the Halloween traditions people recognize today, separating well-supported history from later legends.' }}
+          TITLE: \${{ github.event.inputs.title }}
+          MANUAL_SCRIPT: \${{ github.event.inputs.script }}
+          DURATION: \${{ github.event.inputs.duration }}
+          SCENES: \${{ github.event.inputs.scenes }}
+          VOICE: \${{ github.event.inputs.voice }}
+          RESOLUTION: \${{ github.event.inputs.resolution }}
         run: |
           python - <<'PY'
           import os
           from pathlib import Path
           from src.render import render_documentary
+          title = os.environ.get("TITLE", "").strip()
+          script = os.environ.get("MANUAL_SCRIPT", "").strip()
+          if len(script) < 250:
+              raise SystemExit("Paste the complete manual narration in the script input.")
           duration = int(os.environ["DURATION"])
-          if duration < 5 or duration > 8:
+          if duration not in (5, 6, 7, 8):
               raise SystemExit("Duration must be between 5 and 8 minutes.")
-          topic = os.environ.get("TOPIC", "").strip()
-          if not topic:
-              from src.story import weekly_topic
-              topic = weekly_topic()
-          print(f"Selected documentary topic: {topic}")
+          print(f"Rendering manual script: {title}; words={len(script.split())}; target={duration} min.")
           result = render_documentary(
-              topic=topic,
+              topic=title or "Manual Script Documentary",
               duration_minutes=duration,
               scene_count=int(os.environ["SCENES"]),
               voice=os.environ["VOICE"],
               resolution=os.environ["RESOLUTION"],
-              angle=os.environ.get("ANGLE", ""),
               output_dir=Path("output"),
+              manual_script=script,
           )
           print(result["report"])
           PY
