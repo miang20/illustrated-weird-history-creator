@@ -3,6 +3,12 @@ name: Render Manual Stickman Documentary
 on:
   workflow_dispatch:
     inputs:
+      niche:
+        description: Visual and caption preset
+        required: true
+        type: choice
+        options: [stickman_history, survival, psychology, science, dark_mysteries]
+        default: stickman_history
       title:
         description: Video title / output name
         required: true
@@ -67,6 +73,7 @@ jobs:
           pip install -r requirements-render.txt
       - name: Preflight renderer imports and export settings
         env:
+          NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           DURATION: ${{ github.event.inputs.duration || '5' }}
           SCENES: ${{ github.event.inputs.scenes || '30' }}
           VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
@@ -78,7 +85,10 @@ jobs:
           import numpy, soundfile, torch, diffusers, transformers
           from kokoro import KPipeline
           from src.manual_script import build_manual_story
+          from src.niche_presets import load_niche_preset
           from src.render import render_documentary
+          niche = os.environ["NICHE"]
+          preset = load_niche_preset(niche)
           duration = int(os.environ["DURATION"])
           scenes = int(os.environ["SCENES"])
           voice = os.environ["VOICE"]
@@ -94,12 +104,13 @@ jobs:
           sample = build_manual_story("Preflight", "## SCENE 1 — HOOK\n" + ("This is a complete manual narration sentence. " * 60))
           if sample.word_count < 250 or any("SCENE 1" in p for p in sample.paragraphs):
               raise SystemExit("Manual-script parser preflight failed.")
-          print(f"Preflight passed: manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
+          print(f"Preflight passed: niche={niche}, manual script mode, {duration} min, {scenes} scenes, {voice}, {resolution}; CPU torch={torch.__version__}.")
           PY
       - name: Render the supplied manual script
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           DURATION: ${{ github.event.inputs.duration }}
           SCENES: ${{ github.event.inputs.scenes }}
           VOICE: ${{ github.event.inputs.voice }}
@@ -125,6 +136,7 @@ jobs:
               resolution=os.environ["RESOLUTION"],
               output_dir=Path("output"),
               manual_script=script,
+              niche=os.environ.get("NICHE", "stickman_history"),
           )
           print(result["report"])
           PY
