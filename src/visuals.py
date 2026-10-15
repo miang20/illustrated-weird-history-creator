@@ -9,7 +9,7 @@ import torch
 from diffusers import AutoPipelineForText2Image
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
-from src.image_providers import cache_key, generate_with_fallback, is_valid_image, pollinations_image, validate_provider
+from src.image_providers import apply_monochrome_line_art, cache_key, generate_with_fallback, is_valid_image, pollinations_image, validate_provider
 from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset
 
 # Free local models remain available as the no-key fallback. Do not remove.
@@ -29,13 +29,6 @@ def _apply_2d_illustration_treatment(image: Image.Image) -> Image.Image:
     outlined = ImageChops.multiply(flat, ink_rgb)
     outlined = ImageEnhance.Color(outlined).enhance(1.12)
     return ImageEnhance.Contrast(outlined).enhance(1.06)
-
-
-def _apply_monochrome_line_art(image: Image.Image) -> Image.Image:
-    """Normalize every provider's image to black drawing on a pure white background."""
-    grayscale = ImageOps.autocontrast(ImageOps.grayscale(image.convert("RGB")))
-    binary = grayscale.point(lambda value: 0 if value < 178 else 255, mode="1")
-    return binary.convert("RGB")
 
 
 def _open_cached(path: Path) -> Image.Image | None:
@@ -165,7 +158,7 @@ def generate_scenes(
                 raise RuntimeError(f"No image produced for scene {n + 1}.")
             image = ImageOps.fit(image.convert("RGB"), (1280, 720), method=Image.Resampling.LANCZOS)
             # Enforce the chosen universal style for Pollinations and local fallback alike.
-            image = _apply_monochrome_line_art(image)
+            image = apply_monochrome_line_art(image)
             image.save(target, format="JPEG", quality=92, optimize=True)
             outputs.append(target)
             manifest.append({
