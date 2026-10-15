@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
-from src.story import Story
+
+@dataclass
+class ManualStory:
+    title: str
+    paragraphs: list[str]
+    sources: list[dict[str, str]]
+    word_count: int
 
 
-def build_manual_story(title: str, script: str) -> Story:
+def build_manual_story(title: str, script: str) -> ManualStory:
     """Parse user-written narration without rewriting, summarizing, or adding claims."""
     if not script or len(script.strip()) < 250:
         raise ValueError("Manual script is empty or too short. Paste the complete narration first.")
@@ -52,7 +59,7 @@ def build_manual_story(title: str, script: str) -> Story:
     word_count = len(re.findall(r"[a-z0-9']+", " ".join(paragraphs).lower()))
     if word_count < 250:
         raise ValueError(f"Manual script has only {word_count} words after parsing; paste the full narration.")
-    return Story(
+    return ManualStory(
         title=title.strip() or "Manual Script Documentary",
         paragraphs=paragraphs,
         sources=[],
