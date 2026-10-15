@@ -181,7 +181,11 @@ def render_documentary(topic: str, duration_minutes: int = 6, scene_count: int =
     image_manifest = json.loads(image_manifest_path.read_text(encoding="utf-8")) if image_manifest_path.exists() else {"images": [], "fallback_count": 0}
     report = {"title":story.title,"topic":topic,"video":str(final_path),"duration_seconds":round(video_seconds,2),
         "word_count":story.word_count,"voice_engine":voice_engine,"voice":selected_voice,"niche":niche,"provider":provider,"scene_count":len(images),"resolution":resolution,
-        "image_provider_counts":{name:sum(1 for item in image_manifest.get("images",[]) if item.get("provider")==name or item.get("provider","").startswith(name+":")) for name in ("pollinations","local","local-fallback")},
+        "image_provider_counts":{
+            "pollinations":sum(1 for item in image_manifest.get("images",[]) if item.get("provider","").startswith("pollinations")),
+            "local":sum(1 for item in image_manifest.get("images",[]) if item.get("provider","").startswith("stabilityai/") or item.get("provider","").startswith("segmind/")),
+            "local_fallback":sum(1 for item in image_manifest.get("images",[]) if item.get("fallback")),
+        },
         "image_fallback_count":image_manifest.get("fallback_count",0),"images":image_manifest.get("images",[]),
         "size_bytes":int(media["size"]),"video_codec":video_stream.get("codec_name"),
         "audio_codec":audio_stream.get("codec_name"),"sources":story.sources}
