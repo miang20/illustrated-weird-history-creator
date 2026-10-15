@@ -7,8 +7,12 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-PIPER_MODEL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx"
-PIPER_CONFIG = PIPER_MODEL + ".json"
+PIPER_VOICES = {
+    # Match the requested Kokoro voice's broad presentation when falling back to Piper.
+    "af_heart": "en_US-lessac-medium",
+    "am_michael": "en_US-ryan-medium",
+}
+PIPER_BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US"
 
 def _kokoro(paragraphs: list[str], out_dir: Path, voice: str) -> list[Path]:
     from kokoro import KPipeline
@@ -33,11 +37,14 @@ def _download(url: str, target: Path) -> None:
         with urllib.request.urlopen(request, timeout=90) as response, target.open("wb") as out:
             out.write(response.read())
 
-def _piper(paragraphs: list[str], out_dir: Path) -> list[Path]:
-    model = out_dir / "en_US-lessac-medium.onnx"
-    config = out_dir / "en_US-lessac-medium.onnx.json"
-    _download(PIPER_MODEL, model)
-    _download(PIPER_CONFIG, config)
+def _piper(paragraphs: list[str], out_dir: Path, voice: str) -> list[Path]:
+    voice_model = PIPER_VOICES.get(voice, PIPER_VOICES["af_heart"])
+    voice_family = voice_model.split("-")[1]
+    model_url = f"{PIPER_BASE}/{voice_family}/medium/{voice_model}.onnx"
+    model = out_dir / f"{voice_model}.onnx"
+    config = out_dir / f"{voice_model}.onnx.json"
+    _download(model_url, model)
+    _download(model_url + ".json", config)
     outputs = []
     for i, paragraph in enumerate(paragraphs):
         path = out_dir / f"voice_{i:03d}.wav"
@@ -55,7 +62,7 @@ def synthesize_paragraphs(paragraphs: list[str], out_dir: Path, voice: str = "af
     except Exception as primary_error:
         print(f"Kokoro unavailable; switching to Piper: {type(primary_error).__name__}: {primary_error}")
         try:
-            return _piper(paragraphs, out_dir), "Piper neural TTS fallback"
+            return _piper(paragraphs, out_dir, voice), "Piper neural TTS fallback"
         except Exception as fallback_error:
             raise RuntimeError(f"Both neural TTS engines failed; no robotic system voice used. Kokoro: {primary_error}; Piper: {fallback_error}") from fallback_error
 
