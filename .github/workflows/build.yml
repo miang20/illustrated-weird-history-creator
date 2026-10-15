@@ -67,10 +67,10 @@ jobs:
           pip install -r requirements-render.txt
       - name: Preflight renderer imports and export settings
         env:
-          DURATION: \${{ github.event.inputs.duration || '5' }}
-          SCENES: \${{ github.event.inputs.scenes || '30' }}
-          VOICE: \${{ github.event.inputs.voice || 'af_heart' }}
-          RESOLUTION: \${{ github.event.inputs.resolution || '1920x1080' }}
+          DURATION: ${{ github.event.inputs.duration || '5' }}
+          SCENES: ${{ github.event.inputs.scenes || '30' }}
+          VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
+          RESOLUTION: ${{ github.event.inputs.resolution || '1920x1080' }}
         run: |
           python -m compileall -q app.py src
           python - <<'PY'
@@ -98,12 +98,12 @@ jobs:
           PY
       - name: Render the supplied manual script
         env:
-          TITLE: \${{ github.event.inputs.title }}
-          MANUAL_SCRIPT: \${{ github.event.inputs.script }}
-          DURATION: \${{ github.event.inputs.duration }}
-          SCENES: \${{ github.event.inputs.scenes }}
-          VOICE: \${{ github.event.inputs.voice }}
-          RESOLUTION: \${{ github.event.inputs.resolution }}
+          TITLE: ${{ github.event.inputs.title }}
+          MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          DURATION: ${{ github.event.inputs.duration }}
+          SCENES: ${{ github.event.inputs.scenes }}
+          VOICE: ${{ github.event.inputs.voice }}
+          RESOLUTION: ${{ github.event.inputs.resolution }}
         run: |
           python - <<'PY'
           import os
