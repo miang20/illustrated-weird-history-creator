@@ -95,3 +95,34 @@ def pollinations_image(
                 # Increasing retry delays, while each request is also rate-limited to >=15 seconds.
                 sleep(15 * (attempt + 1))
     raise RuntimeError(f"Pollinations failed after {attempts} attempt(s): {last_error}") from last_error
+
+
+SUPPORTED_PROVIDERS = {"pollinations", "local"}
+
+
+def validate_provider(provider: str) -> str:
+    if provider not in SUPPORTED_PROVIDERS:
+        raise ValueError("Unknown image provider. Choose 'pollinations' or 'local'.")
+    return provider
+
+
+def generate_with_fallback(
+    prompt: str,
+    seed: int,
+    cache_dir: Path,
+    local_generator,
+    *,
+    provider: str = "pollinations",
+    pollinations_generator=pollinations_image,
+) -> tuple[Image.Image, str, bool, str | None]:
+    """Provider selection/fallback seam, designed to be testable without network or model downloads."""
+    validate_provider(provider)
+    if provider == "local":
+        image, provider_name, cache_hit = local_generator()
+        return image, provider_name, cache_hit, None
+    try:
+        image, _, cache_hit = pollinations_generator(prompt, seed, cache_dir, attempts=3)
+        return image, ("pollinations-cache" if cache_hit else "pollinations"), cache_hit, None
+    except Exception as exc:
+        image, provider_name, cache_hit = local_generator()
+        return image, f"local-fallback:{provider_name}", cache_hit, str(exc)
