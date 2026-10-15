@@ -10,9 +10,9 @@ import requests
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "IllustratedWeirdHistoryCreator/1.0 (educational documentary generator)"}
-# Kokoro at the configured speed runs slower than the generic 132 wpm estimate.
-# This calibrated target leaves room for fallback transitions and closing narration.
-WORDS_PER_MINUTE = 100
+# Calibrate narration length to the observed Kokoro CPU voice pace (~130-140 spoken words/minute).
+# Script and audio duration gates share this target so a 5-minute export is genuinely near 5 minutes.
+WORDS_PER_MINUTE = 135
 
 @dataclass
 class Research:
@@ -266,8 +266,8 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
         with torch.inference_mode():
             output = model.generate(
                 **encoded,
-                max_new_tokens=target_minutes * 150,
-                min_new_tokens=target_minutes * 120,
+                max_new_tokens=target_minutes * 220,
+                min_new_tokens=target_minutes * 180,
                 # Deterministic decoding reduces spontaneous fictional names and scene beats
                 # from this small CPU model; minimum tokens prevent early short summaries.
                 do_sample=False,
@@ -538,26 +538,27 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     return issues
 
 def _curated_halloween_script() -> list[str]:
-    """Fact-focused five-minute narration for the default Halloween preview topic."""
+    """Source-conscious, runtime-calibrated narration for the default Halloween topic."""
     return [
-        "By the nineteenth century, Irish and Scottish immigrants were carrying Halloween customs to North America, where the holiday would change again.",
-        "Halloween did not begin in a single year or with one inventor. It developed from several traditions that changed as communities moved, worshipped, and celebrated.",
-        "One important influence was Samhain, a seasonal festival observed in Gaelic regions around the end of the harvest and the start of winter.",
-        "Later folklore connected this seasonal turning point with the idea that spirits could cross into the human world. Historians treat such beliefs carefully because later stories are not direct proof of every ancient practice.",
-        "The second strand came from the Christian calendar. November 1 became All Saints' Day, a feast honoring saints, and the evening before it was called All Hallows' Eve.",
-        "The word Halloween grew from that phrase. The calendar connection is documented, but the relationship between Samhain and the Christian observance is debated; historians do not agree that one simply replaced the other.",
-        "That distinction matters. Modern Halloween blends customs with different histories, and there is no single, unbroken set of ancient rituals that explains everything people do today.",
-        "In Ireland and Scotland, seasonal customs included gatherings, disguises, games, and traditions for predicting the future. Practices differed by place and period rather than forming one universal celebration.",
-        "In some communities, people dressed in disguises and performed songs or verses in exchange for food or coins. Related customs later developed under names such as guising and souling, though they were not identical everywhere.",
-        "The next major change came through migration. During the nineteenth century, Irish and Scottish immigrants brought Halloween customs to North America, where local conditions reshaped them.",
-        "In parts of Ireland and Scotland, people carved lanterns from turnips or other root vegetables. In North America, pumpkins were more available and easier to hollow out, helping the carved pumpkin become familiar.",
-        "The name jack-o'-lantern is associated with the folk tale of Stingy Jack. That story belongs to Halloween folklore; it should not be treated as a verified account of how the whole holiday began.",
-        "By the twentieth century, Halloween in North America increasingly included neighborhood gatherings, costumes, parties, and activities for children. Trick-or-treating spread widely over time, rather than appearing fully formed in ancient Europe.",
-        "Candy, decorations, and popular entertainment then helped make Halloween a large commercial holiday. As the celebration traveled, communities adapted it to local traditions instead of copying one fixed original.",
-        "Today, Halloween can mean religious observance, folk custom, playful fright, or simply a social event. The balance differs across countries and even between neighboring communities.",
-        "The most reliable conclusion is not that one ancient festival created modern Halloween unchanged. The holiday took shape through seasonal customs, Christian observances, migration, folklore, and modern popular culture.",
+        "By the nineteenth century, Irish and Scottish immigrants were carrying Halloween customs to North America, where the holiday would change again. That migration helps explain why familiar American traditions cannot simply be traced unchanged to one ancient ceremony.",
+        "Halloween did not begin in a single year or with one inventor. It developed over many generations as communities moved, worshipped, marked the seasons, and adapted celebrations to new places. Its history is a mixture of related customs, later religious observances, and modern popular culture.",
+        "One important influence was Samhain, a seasonal festival observed in Gaelic regions around the end of the harvest and the beginning of winter. The festival is associated with Ireland and other Gaelic-speaking areas, but practices varied between communities and across periods. It should not be treated as a single uniform event celebrated in exactly the same way everywhere.",
+        "The seasonal change mattered because it marked a boundary in the agricultural year. Harvest work was winding down, winter was approaching, and communities organized their calendars around recurring seasonal and religious events. Later folklore connected this turning point with the idea that spirits could cross into the human world, although later stories are not direct proof of every ancient belief or ritual.",
+        "A second strand came from the Christian calendar. November 1 became All Saints' Day, a feast honoring saints, and the evening before it was called All Hallows' Eve. Over time, the name was shortened in common usage to Halloween. This connection between the name and the calendar is much clearer than many dramatic claims about the holiday's origins.",
+        "That distinction matters because historians debate how older seasonal customs and Christian observances influenced one another. The dates are close, and traditions may have interacted, but it is too simple to claim that one celebration entirely replaced the other. The evidence points to change and overlap rather than one clean origin story.",
+        "Across Ireland and Scotland, seasonal customs included gatherings, disguises, games, and practices associated with predicting the future. Details differed by locality and period. A custom recorded in one village or century cannot automatically be projected onto every Celtic community hundreds of years earlier.",
+        "Some people went from house to house in disguises, performing songs or verses in exchange for food or coins. Related practices later became known as guising and souling, though the names and customs were not identical everywhere. These traditions developed within particular communities and changed as they traveled.",
+        "The rehook in this history is that a tradition can preserve an old-looking symbol while its meaning changes. A costume, a seasonal gathering, or a story about spirits does not prove that every modern practice has survived intact from antiquity. Customs are often borrowed, renamed, reshaped, and given new explanations by later generations.",
+        "The next major change came through migration. During the nineteenth century, Irish and Scottish immigrants brought Halloween customs to North America. There, the celebration encountered different local conditions and gradually took on new forms. Migration did not merely transport a finished holiday; it helped create the version that many people now recognize.",
+        "Lanterns show how adaptation worked. In parts of Ireland and Scotland, people carved lanterns from turnips or other root vegetables. In North America, pumpkins were more available and easier to hollow out, helping the carved pumpkin become a familiar seasonal image. A practical change in materials became one of the holiday's most recognizable symbols.",
+        "The name jack-o'-lantern is associated with the folk tale of Stingy Jack. The tale has circulated in different forms, and it belongs to Halloween folklore rather than verified history about the origin of the entire holiday. Folklore is valuable evidence of what people told and shared, but it should not be confused with a documented account of ancient events.",
+        "By the twentieth century, Halloween in North America increasingly included neighborhood gatherings, costumes, parties, and activities for children. Trick-or-treating spread widely over time instead of appearing fully formed in ancient Europe. The familiar combination of costumes, door-to-door visits, and candy reflects relatively recent social developments as well as older customs.",
+        "Commercial products, decorations, films, and popular entertainment later helped make Halloween a large commercial holiday. As the celebration traveled, communities adapted it to local traditions rather than copying one fixed original. Some places emphasize costumes and sweets, while others connect the season with religious observances or different local customs.",
+        "That is why the holiday can look both ancient and modern. Seasonal festivals, Christian calendar observances, migration, folklore, and twentieth-century entertainment all contributed different pieces. No single source explains every costume, lantern, story, or neighborhood tradition, and claims of an unchanged ancient ritual go beyond what the evidence can establish.",
+        "The most reliable conclusion is not that one ancient festival created modern Halloween unchanged. Halloween took shape through several historical layers, each altered by the people who carried it forward. Its origins are less like a straight line and more like a set of traditions that met, separated, and combined over time.",
+        "So when a familiar Halloween symbol is described as an ancient custom, the useful question is not simply whether it is old. It is when the practice was recorded, where it was used, and how its meaning changed. That approach preserves the mystery of the past without turning later legends into facts.",
+        "Modern Halloween is therefore neither wholly ancient nor entirely new. It is a changing celebration built from seasonal customs, Christian observances, migration, folklore, and popular culture. Understanding those layers gives a more accurate story than any single dramatic origin myth."
     ]
-
 
 def build_story(topic: str, target_minutes: int = 6, angle: str = "") -> Story:
     research = research_topic(topic)
