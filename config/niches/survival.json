@@ -1,0 +1,30 @@
+{
+  "display_name": "Survival & Human Endurance",
+  "style_prefix": "Popular YouTube-style simple 2D stickman survival explainer illustration; bold clean dark outlines, round heads, thin line limbs, flat readable shapes, urgent expressive body language; no photorealism, no 3D, no live action.",
+  "character_look": "The same main survival stickman in every scene: a small tan round head with two dot eyes, one expressive black mouth, thin black line arms and legs, a simple dark-olive sleeveless tunic, a rust-red waist wrap, and a small consistent charcoal backpack; fixed simple proportions and flat 2D ink outline, no realistic anatomy.",
+  "color_palette": "Forest green, dry grass ochre, charcoal, clay red, and pale sky blue; flat colors with clear contrast.",
+  "environment_hints": "Show survival-relevant terrain such as forest, desert, mountain, river, snow, shelter, fire, water, rope, or basic tools only when the narration calls for them; prioritize readable danger and practical context.",
+  "action_directions": [
+    "the main stickman cautiously tests a path with a branch",
+    "the main stickman runs from a visible environmental danger",
+    "the main stickman crouches to build a basic shelter",
+    "the main stickman gathers water or food with focused body language",
+    "the main stickman struggles uphill carrying a small pack",
+    "the main stickman signals for help from a rocky ledge",
+    "the main stickman warms hands near a small controlled campfire",
+    "the main stickman studies tracks and chooses a safer route",
+    "the main stickman braces against wind or heavy rain"
+  ],
+  "negative_prompt": "photograph, photorealism, realistic human anatomy, live action, 3D, CGI, glossy toy, fantasy armor, glowing eyes, modern tactical gear unless script says so, gore, garbled writing, captions, logo, watermark, duplicate character, extra limbs, blurry subject, static pose lineup",
+  "fixed_seed": 285013,
+  "caption_style": {
+    "font_size": 23,
+    "text_color": "#FFFFFF",
+    "outline_color": "#142015",
+    "position": "bottom_center",
+    "outline_width": 3,
+    "margin_v": 44
+  },
+  "default_voice": "am_michael",
+  "postprocess": false
+}

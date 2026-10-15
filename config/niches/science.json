@@ -1,0 +1,30 @@
+{
+  "display_name": "Science & Weird Discoveries",
+  "style_prefix": "Popular YouTube-style simple 2D stickman science explainer illustration; clear hand-drawn outlines, round heads, thin limbs, flat cartoon shapes, bold simple scientific visual metaphors; no photorealism, no 3D, no live action.",
+  "character_look": "The same main science stickman in every scene: a white round head with two dot eyes and one simple expressive black mouth, thin black line arms and legs, a consistent white lab coat over a cobalt-blue shirt, and stable minimal proportions; flat 2D ink outline, no realistic anatomy.",
+  "color_palette": "Cobalt blue, laboratory white, charcoal, lemon yellow, and mint green; keep backgrounds uncluttered and high contrast.",
+  "environment_hints": "Use simple labs, observatories, planets, atoms as basic shapes, fossils, rocks, weather, plants, or experiment props only when supported by the narration; diagrams must be visual shapes without readable labels.",
+  "action_directions": [
+    "the main stickman examines a simple specimen through a magnifier",
+    "the main stickman cautiously observes a bubbling experiment",
+    "the main stickman points at a clear planetary or weather phenomenon",
+    "the main stickman compares two simple samples side by side",
+    "the main stickman reacts with surprise to an unexpected result",
+    "the main stickman carefully adjusts a basic lab instrument",
+    "the main stickman kneels beside a fossil or rock sample",
+    "the main stickman gestures toward a simple cause-and-effect diagram",
+    "the main stickman looks up at a starry observatory scene"
+  ],
+  "negative_prompt": "photograph, photorealism, realistic anatomy, live action, 3D, CGI, shiny science fiction armor, fantasy magic, readable formulas, letters, captions, watermark, logo, duplicated character, extra limbs, cluttered lab, blurry subject, overdesigned concept art",
+  "fixed_seed": 481039,
+  "caption_style": {
+    "font_size": 22,
+    "text_color": "#FFFFFF",
+    "outline_color": "#10243B",
+    "position": "bottom_center",
+    "outline_width": 3,
+    "margin_v": 46
+  },
+  "default_voice": "am_michael",
+  "postprocess": false
+}

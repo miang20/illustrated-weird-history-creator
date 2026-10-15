@@ -7,3 +7,4 @@ venv/
 work/
 output/
 .cache/
+.image-cache/
