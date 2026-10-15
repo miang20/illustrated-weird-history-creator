@@ -21,9 +21,14 @@ on:
         type: string
         default: "My Stickman Documentary"
       script:
-        description: Paste the complete narration; scene headings are optional
-        required: true
+        description: Paste narration here, or use Script file below
+        required: false
         type: string
+      script_file:
+        description: Optional path to a multi-line narration file inside the repo (for example scripts/sample_test.txt)
+        required: false
+        type: string
+        default: ""
       duration:
         description: Target narration length in minutes
         required: true
@@ -47,6 +52,7 @@ jobs:
         env:
           TITLE: ${{ github.event.inputs.title }}
           MANUAL_SCRIPT: ${{ github.event.inputs.script }}
+          SCRIPT_FILE: ${{ github.event.inputs.script_file }}
           NICHE: ${{ github.event.inputs.niche || 'stickman_history' }}
           PROVIDER: ${{ github.event.inputs.provider || 'pollinations' }}
           DURATION: ${{ github.event.inputs.duration }}
@@ -54,11 +60,11 @@ jobs:
           python - <<'PY'
           import json, os, re
           from pathlib import Path
-          from src.manual_script import build_manual_story, script_length_report
+          from src.manual_script import build_manual_story, script_length_report, read_manual_script
           from src.niche_presets import load_niche_preset
           from src.image_providers import validate_provider
           title = os.environ.get("TITLE", "Manual Script Documentary")
-          raw = os.environ.get("MANUAL_SCRIPT", "")
+          raw = read_manual_script(os.environ.get("SCRIPT_FILE", ""), os.environ.get("MANUAL_SCRIPT", ""))
           duration = int(os.environ["DURATION"])
           niche = os.environ.get("NICHE", "stickman_history")
           preset = load_niche_preset(niche)
