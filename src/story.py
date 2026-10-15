@@ -271,10 +271,10 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             output = model.generate(
                 **encoded,
                 max_new_tokens=target_minutes * (135 if attempt == 0 else 125),
-                do_sample=True,
-                temperature=0.30 if attempt else 0.38,
-                top_p=0.82,
-                repetition_penalty=1.12,
+                # Deterministic decoding reduces spontaneous fictional names and scene beats
+                # from this small CPU model; the revision prompt changes between attempts.
+                do_sample=False,
+                repetition_penalty=1.08,
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id,
             )
