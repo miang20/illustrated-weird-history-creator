@@ -9,7 +9,7 @@ import torch
 from diffusers import AutoPipelineForText2Image
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter, ImageOps
 
-from src.image_providers import cache_key, is_valid_image, pollinations_image
+from src.image_providers import cache_key, generate_with_fallback, is_valid_image, pollinations_image, validate_provider
 from src.niche_presets import DEFAULT_NICHE, build_scene_prompt, load_niche_preset
 
 # Free local models remain available as the no-key fallback. Do not remove.
@@ -107,8 +107,7 @@ def generate_scenes(
     cache_dir: Path | str = Path(".image-cache"),
 ) -> list[Path]:
     """Generate scene stills with free Pollinations by default and scene-local model fallback."""
-    if provider not in {"pollinations", "local"}:
-        raise ValueError("Unknown image provider. Choose 'pollinations' or 'local'.")
+    validate_provider(provider)
     preset = load_niche_preset(niche)
     out_dir.mkdir(parents=True, exist_ok=True)
     if not paragraphs:
@@ -145,14 +144,13 @@ def generate_scenes(
                     if image is not None:
                         provider_used, cache_hit = "local-cache-fallback", True
                     else:
-                        try:
-                            image, _, cache_hit = pollinations_image(prompt, seed, cache_root)
-                            provider_used = "pollinations-cache" if cache_hit else "pollinations"
-                        except Exception as exc:
-                            fallback_reason = str(exc)
+                        def local_for_this_scene():
+                            return _local_image(prompt, preset, seed, local_cache, local_pipe)
+                        image, provider_used, cache_hit, fallback_reason = generate_with_fallback(
+                            prompt, seed, cache_root, local_for_this_scene, provider="pollinations"
+                        )
+                        if fallback_reason:
                             print(f"Pollinations exhausted 3 attempts for scene {n + 1}; using local model for this scene only.")
-                            image, provider_used, cache_hit = _local_image(prompt, preset, seed, local_cache, local_pipe)
-                            provider_used = f"local-fallback:{provider_used}"
             else:
                 image, provider_used, cache_hit = _local_image(prompt, preset, seed, selected_cache, local_pipe)
 
@@ -166,7 +164,7 @@ def generate_scenes(
                 "image": target.name,
                 "provider": provider_used,
                 "cache_hit": bool(cache_hit),
-                "fallback": provider_used.startswith("local-fallback"),
+                "fallback": provider_used.startswith("local-fallback") or provider_used == "local-cache-fallback",
                 "fallback_reason": fallback_reason,
                 "seed": seed,
                 "cache_key": cache_key(prompt, seed, provider if provider_used.startswith("pollinations") else "local"),
