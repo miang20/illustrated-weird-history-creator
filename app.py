@@ -7,6 +7,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.niche_presets import DEFAULT_NICHE, available_niches, load_niche_preset
+
 ROOT = Path(__file__).resolve().parent
 REPO = "miang20/illustrated-weird-history-creator"
 ACTIONS_URL = f"https://github.com/{REPO}/actions"
@@ -22,11 +24,19 @@ st.info(
 
 with st.sidebar:
     st.header("Production settings")
+    niche_options = available_niches()
+    niche = st.selectbox(
+        "Niche preset", niche_options,
+        index=niche_options.index(DEFAULT_NICHE),
+        format_func=lambda key: load_niche_preset(key)["display_name"],
+    )
+    niche_preset = load_niche_preset(niche)
     minutes = st.slider("Target duration", 5, 8, 5)
     scene_count = st.select_slider("Visual scenes", options=[18, 24, 30, 36], value=30)
+    voice_options = ["Warm female documentary (Kokoro af_heart)", "Warm male documentary (Kokoro am_michael)"]
     voice = st.selectbox(
-        "Narrator",
-        ["Warm female documentary (Kokoro af_heart)", "Warm male documentary (Kokoro am_michael)"],
+        "Narrator", voice_options,
+        index=0 if niche_preset["default_voice"] == "af_heart" else 1,
     )
     resolution = st.selectbox(
         "Export resolution",
@@ -83,7 +93,7 @@ def configured_github_token() -> str:
     return token
 
 
-def dispatch(script_value: str, title_value: str, duration: int, scenes: int, voice_name: str, output_size: str) -> tuple[bool, str]:
+def dispatch(script_value: str, title_value: str, duration: int, scenes: int, voice_name: str, output_size: str, niche_name: str) -> tuple[bool, str]:
     token = configured_github_token()
     if not token:
         return False, "No GITHUB_TOKEN configured for remote dispatch."
@@ -105,6 +115,7 @@ def dispatch(script_value: str, title_value: str, duration: int, scenes: int, vo
                 "scenes": str(scenes),
                 "voice": voice_name,
                 "resolution": output_size,
+                "niche": niche_name,
             },
         },
         timeout=30,
@@ -169,7 +180,7 @@ if st.button("Render this script → final MP4", type="primary", use_container_w
         st.stop()
     voice_name = "af_heart" if voice.startswith("Warm female") else "am_michael"
     output_size = "1920x1080" if resolution.startswith("1920") else "1280x720"
-    ok, message = dispatch(script_clean, project_title.strip(), minutes, int(scene_count), voice_name, output_size)
+    ok, message = dispatch(script_clean, project_title.strip(), minutes, int(scene_count), voice_name, output_size, niche)
     if ok:
         st.success(message)
         st.link_button("Open GitHub Actions", ACTIONS_URL)
@@ -191,6 +202,7 @@ if st.button("Render this script → final MP4", type="primary", use_container_w
                     resolution=output_size,
                     manual_script=script_clean,
                     output_dir=ROOT / "output",
+                    niche=niche,
                 )
                 status.update(label="Render complete", state="complete")
             st.video(str(result["video"]))
