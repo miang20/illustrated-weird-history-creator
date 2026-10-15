@@ -210,7 +210,7 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             "content": (
                 "You are an expert high-retention YouTube documentary storyteller specializing in strange, surprising real history. "
                 "Write original, natural spoken English that sounds excellent aloud, never like an encyclopedia entry. "
-                "Accuracy is mandatory: do not invent dialogue, dates, motives, quotations, scenes, rituals, locations, events, or people. Never invent character names such as Sarah or Jack; use a person's or group's proper name only if that exact name appears in the research notes. Use only facts explicitly supported by the research notes. Do not reconstruct atmosphere or describe people doing things unless the notes document it. "
+                "This is a NONFICTION HISTORY DOCUMENTARY, never a fictional short story or screenplay. Do not invent a protagonist, named character, family anecdote, discovered book or map, secret graveyard, glowing symbols, witch, ghost, curse, magic, invented ritual, dialogue, scene, motive, date, quotation, location, event, or supernatural plot. Never invent people names such as Jamie, Sarah, or Jack; use a person's or group's proper name only if it appears in the research notes. Every paragraph must explain a documented historical fact, source-backed consequence, or clearly attributed historical uncertainty. If the notes do not support a detail, omit it. Use only facts explicitly supported by the research notes. "
                 "Clearly distinguish documented facts from disputed explanations and mark uncertainty honestly. Paraphrase rather than copying source sentences. Never fill gaps with folklore, imagined scenes, generic suspense, or facts remembered from outside the supplied notes. "
                 "Every paragraph must either reveal a new fact, raise a meaningful question the evidence can answer, clarify stakes, or change the viewer's understanding. "
                 "Avoid filler, repetitive transitions, fake cliffhangers, generic moral lessons, and sensational claims unsupported by evidence. "
@@ -291,10 +291,14 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
             generated,
         )
         generated = re.sub(
-            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|payoff|conclusion)\s*:\s*",
+            r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|deeper\s+story|continuation|payoff|conclusion)\s*:\s*",
             "",
             generated,
-        ).strip()
+        )
+        generated = re.sub(r"(?m)^\s*#{1,6}\s*", "", generated)
+        generated = re.sub(r"\*\*(.*?)\*\*", r"\1", generated)
+        generated = re.sub(r"(?im)^\s*(?:opening\s+hook|hook|story|rehook|continuation|payoff|conclusion)\s*:\s*", "", generated)
+        generated = re.sub(r"\n\s*\n\s*\n+", "\n\n", generated).strip()
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", generated) if len(p.split()) >= 20]
         if len(paragraphs) < 10:
             # Split short-model output into sentence beats rather than letting seven
@@ -390,6 +394,43 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
     found_filler = [phrase for phrase in filler_phrases if lower_text.count(phrase) > 0]
     if found_filler:
         issues.append("generic filler detected: " + ", ".join(found_filler))
+    # Reject invented protagonists and fictional scene beats that a small local model
+    # may add despite a nonfiction prompt. A script with these patterns is not safe to render.
+    fictional_patterns = {
+        "fictional named protagonist": r"\b(?:a|the)\s+(?:young\s+)?(?:boy|girl|child|man|woman)\s+named\s+[A-Z][a-z]+",
+        "invented discovery scene": r"\b(?:stumbles upon|discovers|finds)\s+(?:an?\s+)?(?:secret|mysterious|glowing|ancient)\s+(?:book|map|graveyard|symbols?)",
+        "fictional family backstory": r"\b(?:great[- ]great[- ]grandfather|great[- ]grandfather|great[- ]grandmother)\b",
+        "fantasy plot": r"\b(?:dark magic|banish(?:es|ed|ing)?\s+the\s+witch|restore peace to the cemetery|ghost said to possess|sinister figure rumored to haunt)\b",
+        "fictional adventure moral": r"\b(?:his|her|their) adventure teaches|this narrative explores\b",
+    }
+    detected_fiction = [label for label, pattern in fictional_patterns.items() if re.search(pattern, text, re.IGNORECASE)]
+    if detected_fiction:
+        issues.append("fictional story elements detected in a nonfiction script: " + ", ".join(detected_fiction))
+
+    # Catch repeated capitalized person names that are absent from the selected research.
+    # Ignore sentence-initial words and standard historical/cultural terms.
+    if source_text:
+        source_folded = source_text.casefold()
+        sentence_initials = {
+            re.match(r"[A-Z][a-z]+", sentence.strip()).group(0).casefold()
+            for sentence in _sentences(text) if re.match(r"[A-Z][a-z]+", sentence.strip())
+        }
+        common_capitalized = {
+            "Halloween", "Samhain", "Celtic", "Christian", "Christians", "Europe",
+            "European", "Irish", "Roman", "Catholic", "All", "Saints", "Saint",
+            "Ancient", "Old", "New", "Industrial", "Revolution", "United", "States",
+        }
+        capitalized = re.findall(r"\b[A-Z][a-z]{2,}\b", text)
+        counts = {}
+        for token in capitalized:
+            folded = token.casefold()
+            if folded in sentence_initials or token in common_capitalized or folded in source_folded:
+                continue
+            counts[folded] = counts.get(folded, 0) + 1
+        invented_names = sorted(name for name, count in counts.items() if count >= 2)
+        if invented_names:
+            issues.append("repeated person/place names not found in the selected research source: " + ", ".join(invented_names[:6]))
+
     # Reject unsupported multi-word named entities while avoiding false positives from
     # sentence-initial title case (for example, 'The strange event changed everything').
     if source_text:
