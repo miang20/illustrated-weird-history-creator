@@ -31,6 +31,13 @@ def _apply_2d_illustration_treatment(image: Image.Image) -> Image.Image:
     return ImageEnhance.Contrast(outlined).enhance(1.06)
 
 
+def _apply_monochrome_line_art(image: Image.Image) -> Image.Image:
+    """Normalize every provider's image to black drawing on a pure white background."""
+    grayscale = ImageOps.autocontrast(ImageOps.grayscale(image.convert("RGB")))
+    binary = grayscale.point(lambda value: 0 if value < 178 else 255, mode="1")
+    return binary.convert("RGB")
+
+
 def _open_cached(path: Path) -> Image.Image | None:
     if not path.is_file():
         return None
@@ -157,6 +164,8 @@ def generate_scenes(
             if image is None:
                 raise RuntimeError(f"No image produced for scene {n + 1}.")
             image = ImageOps.fit(image.convert("RGB"), (1280, 720), method=Image.Resampling.LANCZOS)
+            # Enforce the chosen universal style for Pollinations and local fallback alike.
+            image = _apply_monochrome_line_art(image)
             image.save(target, format="JPEG", quality=92, optimize=True)
             outputs.append(target)
             manifest.append({
