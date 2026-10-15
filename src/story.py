@@ -427,6 +427,11 @@ def _script_quality_issues(title: str, paragraphs: list[str], target_minutes: in
                     continue
                 counts[folded] = counts.get(folded, 0) + 1
         invented_names = sorted(name for name, count in counts.items() if count >= 2)
+        explicitly_named = {
+            match.casefold() for match in re.findall(r"\b(?:named|called)\s+([A-Z][a-z]{2,})\b", text)
+            if match.casefold() not in source_folded
+        }
+        invented_names = sorted(set(invented_names) | explicitly_named)
         if invented_names:
             issues.append("repeated person/place names not found in the selected research source: " + ", ".join(invented_names[:6]))
 
