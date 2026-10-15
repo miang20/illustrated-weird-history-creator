@@ -197,11 +197,13 @@ def _generate_local_script(title: str, extract: str, target_minutes: int, angle:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    model_id = "Qwen/Qwen2.5-1.5B-Instruct"
+    # The 1.5B model repeatedly invented characters and source claims despite
+    # strict prompts. Use the stronger still-public 3B instruction model on CPU.
+    model_id = "Qwen/Qwen2.5-3B-Instruct"
     torch.set_num_threads(min(4, os.cpu_count() or 4))
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
-        model_id, dtype=torch.float32, low_cpu_mem_usage=True
+        model_id, dtype=torch.float16, low_cpu_mem_usage=True
     ).to("cpu")
     model.eval()
     prompt_messages = [
